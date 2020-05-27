@@ -20,6 +20,18 @@ enum ExpressionType {
 /// Numerical types availble for use in expressions.
 enum VectorType { scalar, vec2, vec3, vec4, mat2, mat3, mat4 }
 
+/// Number of scalar elements provided by each [VectorType].
+final vectorTypeDimensions = const {
+  VectorType.scalar: 1,
+  VectorType.vec2: 2,
+  VectorType.vec3: 3,
+  VectorType.vec4: 4,
+  VectorType.vec4: 4,
+  VectorType.mat2: 4,
+  VectorType.mat3: 9,
+  VectorType.mat4: 16,
+};
+
 /// Function types provided by the target shading language.
 enum BuiltInFunction {
   add,

@@ -5,11 +5,33 @@
 #ifndef SSIR_INTERPRETER_INTERPRETER_H_
 #define SSIR_INTERPRETER_INTERPRETER_H_
 
+#include <string>
+
 namespace ssir {
 
+// Error codes for interpreting.
+enum Status { kSuccess = 0 };
+
+// Outcome of an Interpret call.
+struct Result {
+  Status status;
+  std::string message;
+};
+
 // Stub interpreter class.
-class Interpreter {};
+class Interpreter {
+ public:
+  Interpreter() = default;
+
+  virtual ~Interpreter() = default;
+
+  virtual void SetData(const char* data, size_t length) = 0;
+
+  virtual Result Interpret() = 0;
+
+  virtual std::string WriteSKSL() = 0;
+};
 
 }  // namespace ssir
 
-#endif // SSIR_INTERPRETER_INTERPRETER_H_
+#endif  // SSIR_INTERPRETER_INTERPRETER_H_

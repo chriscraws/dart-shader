@@ -21,8 +21,8 @@ abstract class Fragment {
   }
 }
 
-abstract class Scalar with _Expression, Numerical {
-  Scalar._();
+abstract class Scalar extends _Expression with Numerical {
+  Scalar._(spirv.Instruction inst) : super(inst);
 
   spirv.Type get _type => spirv.floatT;
 
@@ -30,20 +30,21 @@ abstract class Scalar with _Expression, Numerical {
 
   Scalar operator +(Scalar b) => _Scalar(_Add(this, b));
   Scalar operator -(Scalar b) => _Scalar(_Subtract(this, b));
+  Scalar operator -() => _Scalar(_Negate(this));
   Scalar operator *(Scalar b) => _Scalar(_Multiply(this, b));
   Scalar operator /(Scalar b) => _Scalar(_Divide(this, b));
 }
 
-abstract class Vec2 with _Expression, Numerical {
-  Vec2._();
+abstract class Vec2 extends _Expression with Numerical {
+  Vec2._(spirv.Instruction instruction) : super(instruction);
 
   spirv.Type get _type => spirv.vec2T;
 
   factory Vec2(double x, double y) => _ConstVec2(x, y);
 }
 
-abstract class Vec4 with _Expression, Numerical {
-  Vec4._();
+abstract class Vec4 extends _Expression with Numerical {
+  Vec4._(spirv.Instruction instruction) : super(instruction);
 
   spirv.Type get _type => spirv.vec4T;
 
@@ -52,8 +53,11 @@ abstract class Vec4 with _Expression, Numerical {
 }
 
 /// Node within an SSIR abstract syntax tree.
-mixin _Expression {
-  spirv.Instruction get _instruction;
+abstract class _Expression {
+  final spirv.Instruction _instruction;
+
+  _Expression(this._instruction) : assert(_instruction != null);
+
   spirv.Type get _type;
 }
 
@@ -64,9 +68,7 @@ class _ConstScalar extends Scalar {
 
   _ConstScalar(this.value)
       : assert(value != null),
-        super._();
-
-  spirv.Instruction get _instruction => spirv.OpConstant(value);
+        super._(spirv.OpConstant(value));
 }
 
 class _ConstVec2 extends Vec2 {
@@ -76,9 +78,7 @@ class _ConstVec2 extends Vec2 {
   _ConstVec2(this.x, this.y)
       : assert(x != null),
         assert(y != null),
-        super._();
-
-  spirv.Instruction get _instruction => spirv.OpConstantComposite.vec2(x, y);
+        super._(spirv.OpConstantComposite.vec2(x, y));
 }
 
 class _ConstVec4 extends Vec4 {
@@ -92,59 +92,56 @@ class _ConstVec4 extends Vec4 {
         assert(y != null),
         assert(z != null),
         assert(w != null),
-        super._();
-
-  spirv.Instruction get _instruction =>
-      spirv.OpConstantComposite.vec4(x, y, z, w);
+        super._(spirv.OpConstantComposite.vec4(x, y, z, w));
 }
 
 class _Scalar extends Scalar {
-  final _Expression _child;
-
-  _Scalar(this._child)
-      : assert(_child != null),
-        assert(_child._type == spirv.floatT),
-        super._();
-
-  spirv.Instruction get _instruction => _child._instruction;
+  _Scalar(Numerical child)
+      : assert(child != null),
+        assert(child._type == spirv.floatT),
+        super._(child._instruction);
 }
 
-abstract class _BinOp with _Expression {
-  final _Expression a;
-  final _Expression b;
+class _Negate extends _Expression with Numerical {
+  final Numerical a;
 
-  _BinOp(this.a, this.b)
+  _Negate(this.a)
+      : assert(a != null),
+        super(spirv.OpFNegate(a._instruction));
+
+  spirv.Type get _type => a._type;
+}
+
+abstract class _BinOp extends _Expression with Numerical {
+  final Numerical a;
+  final Numerical b;
+
+  _BinOp(this.a, this.b, spirv.Instruction instruction)
       : assert(a != null),
         assert(b != null),
-        assert(a._type == b._type);
+        assert(a._type == b._type),
+        assert(instruction != null),
+        super(instruction);
 
   spirv.Type get _type => a._type;
 }
 
 class _Add extends _BinOp {
-  _Add(_Expression a, _Expression b) : super(a, b);
-
-  spirv.Instruction get _instruction =>
-      spirv.OpFAdd(a._instruction, b._instruction);
+  _Add(_Expression a, _Expression b)
+      : super(a, b, spirv.OpFAdd(a._instruction, b._instruction));
 }
 
 class _Subtract extends _BinOp {
-  _Subtract(_Expression a, _Expression b) : super(a, b);
-
-  spirv.Instruction get _instruction =>
-      spirv.OpFSub(a._instruction, b._instruction);
+  _Subtract(_Expression a, _Expression b)
+      : super(a, b, spirv.OpFSub(a._instruction, b._instruction));
 }
 
 class _Multiply extends _BinOp {
-  _Multiply(_Expression a, _Expression b) : super(a, b);
-
-  spirv.Instruction get _instruction =>
-      spirv.OpFMul(a._instruction, b._instruction);
+  _Multiply(_Expression a, _Expression b)
+      : super(a, b, spirv.OpFMul(a._instruction, b._instruction));
 }
 
 class _Divide extends _BinOp {
-  _Divide(_Expression a, _Expression b) : super(a, b);
-
-  spirv.Instruction get _instruction =>
-      spirv.OpFDiv(a._instruction, b._instruction);
+  _Divide(_Expression a, _Expression b)
+      : super(a, b, spirv.OpFDiv(a._instruction, b._instruction));
 }

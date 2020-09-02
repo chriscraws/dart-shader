@@ -355,11 +355,17 @@ class UniOp extends Instruction {
   final Instruction a;
 
   UniOp(int opCode, this.a)
-      : super._(
+      : assert(opCode != null),
+        assert(a != null),
+        super._(
           type: a.type,
           result: true,
           opCode: opCode,
         );
+}
+
+class OpFNegate extends UniOp {
+  OpFNegate(Instruction a) : super(127, a);
 }
 
 // Numerical operation with two arguments.

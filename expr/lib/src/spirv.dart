@@ -4,6 +4,7 @@
 // used in this package, it can be extended as necessary.
 
 import 'dart:convert';
+import 'dart:collection';
 import 'dart:typed_data';
 
 final _magicNumber = 0x07230203;
@@ -12,13 +13,15 @@ final _version = 0x00010500;
 
 final _utf8Encoder = Utf8Encoder();
 
+final _matrixCapability = const OpCapability._(0);
+final _linkageCapability = const OpCapability._(5);
+
+final _glslExtInstImport = const OpExtInstImport._("GLSL.std.450");
+
+final _memoryModel = const OpMemoryModel._();
+
 class _SourceLanguage {
   static const unknown = 0;
-}
-
-class _Capability {
-  static const matrix = OpCapability._(0);
-  static const linkage = OpCapability._(5);
 }
 
 class _GLInstructionID {
@@ -66,6 +69,7 @@ abstract class Identifier {
 class Module extends Identifier {
   int _bound = 0;
   Map<Instruction, int> _ids;
+  OpFunction _main;
 
   int identify(Instruction inst) {
     if (_ids.containsKey(inst)) {
@@ -80,6 +84,68 @@ class Module extends Identifier {
     _ids[inst] = _bound;
     _bound++;
     return id;
+  }
+
+  set main(Instruction fragColor) {
+    assert(fragColor.type == vec4T);
+    final pos = OpFunctionParameter(vec2T);
+    final block = Block._(
+      termination: OpReturnValue._(fragColor),
+    );
+    _main = OpFunction._(
+      type: vec4T,
+      params: [pos],
+      blocks: [block],
+    );
+  }
+
+  ByteBuffer encode() {
+    final instructions = <Instruction>[
+      // capabilities
+      _matrixCapability,
+      _linkageCapability,
+
+      // extension instruction imports
+      _glslExtInstImport,
+
+      // memory model
+      _memoryModel,
+
+      // type delcarations
+      floatT,
+      vec2T,
+      vec3T,
+      vec4T,
+    ];
+
+    _ids.clear();
+
+    // get main definition, and identify all dependent instructions.
+    final mainWords = _main.encode(this);
+
+    // insert all instruction/id pairs into a sorted map
+    final sortedMap = SplayTreeMap.fromIterables(
+      _ids.values, // ids as keys
+      _ids.keys, // instructions as values
+    );
+
+    // add all instructions required by main, in order
+    instructions.addAll(sortedMap.values);
+
+    final words = <int>[
+      _magicNumber,
+      _version,
+      0, // generator's magic number
+      _bound,
+    ];
+
+    for (final instruction in instructions) {
+      words.addAll(instruction.encode(this));
+    }
+
+    words.addAll(mainWords);
+
+    return Int32List.fromList(words).buffer;
   }
 }
 
@@ -274,6 +340,8 @@ class OpConstantComposite extends Instruction {
           result: true,
           opCode: 44,
         );
+
+  OpConstantComposite.vec2(double x, double y) : this._(vec2T, [x, y]);
 
   OpConstantComposite.vec4(double x, double y, double z, double w)
       : this._(vec4T, [x, y, z, w]);

@@ -227,14 +227,16 @@ abstract class _BinOp extends _Expression with Numerical {
         assert(instruction != null),
         super(instruction);
 
+  double _op(double a, double b);
+
   spirv.Type get _type => a._type;
 
-  List<double> _apply(double Function(double a, double b) fn) {
+  List<double> _evaluate() {
     final valueA = a._evaluate();
     final valueB = b._evaluate();
     final out = List<double>(valueA.length);
     for (int i = 0; i < out.length; i++) {
-      out[i] = fn(valueA[i], valueB[i]);
+      out[i] = _op(valueA[i], valueB[i]);
     }
     return out;
   }
@@ -244,35 +246,35 @@ class _Add extends _BinOp {
   _Add(_Expression a, _Expression b)
       : super(a, b, spirv.OpFAdd(a._instruction, b._instruction));
 
-  List<double> _evaluate() => _apply((a, b) => a + b);
+  double _op(double a, double b) => a + b;
 }
 
 class _Subtract extends _BinOp {
   _Subtract(_Expression a, _Expression b)
       : super(a, b, spirv.OpFSub(a._instruction, b._instruction));
 
-  List<double> _evaluate() => _apply((a, b) => a - b);
+  double _op(double a, double b) => a - b;
 }
 
 class _Multiply extends _BinOp {
   _Multiply(_Expression a, _Expression b)
       : super(a, b, spirv.OpFMul(a._instruction, b._instruction));
 
-  List<double> _evaluate() => _apply((a, b) => a * b);
+  double _op(double a, double b) => a * b;
 }
 
 class _Divide extends _BinOp {
   _Divide(_Expression a, _Expression b)
       : super(a, b, spirv.OpFDiv(a._instruction, b._instruction));
 
-  List<double> _evaluate() => _apply((a, b) => a / b);
+  double _op(double a, double b) => a / b;
 }
 
 class _Mod extends _BinOp {
   _Mod(_Expression a, _Expression b)
       : super(a, b, spirv.OpFMod(a._instruction, b._instruction));
 
-  List<double> _evaluate() => _apply((a, b) => a % b);
+  double _op(double a, double b) => a % b;
 }
 
 class _Dot extends Scalar {

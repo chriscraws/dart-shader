@@ -30,12 +30,16 @@ abstract class Instruction {
   // True if this instruction is a type declaration.
   final bool isType;
 
+  // True if this instruction is a decoration.
+  final bool isDecoration;
+
   const Instruction({
     this.opCode,
     this.type,
     this.result = false,
     this.isDeclaration = false,
     this.isType = false,
+    this.isDecoration = false,
   });
 
   /// Ensure that every Instruction included transitively

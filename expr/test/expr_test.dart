@@ -19,8 +19,6 @@ Future<void> matchGolden(ByteBuffer item, String filename) async {
 }
 
 void main() {
-  // No tests yet
-
   test('simple shader', () async {
     final shader = Shader(
       color: Vec4(0, 0.25, 0.75, 1.0),

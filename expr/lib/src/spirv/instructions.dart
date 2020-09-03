@@ -6,15 +6,20 @@ import 'dart:typed_data';
 
 import 'instruction.dart';
 
-final floatT = const OpTypeFloat._(32);
-final vec2T = OpTypeVec._(floatT, 2);
-final vec3T = OpTypeVec._(floatT, 3);
-final vec4T = OpTypeVec._(floatT, 4);
+const floatT = OpTypeFloat._(32);
+const vec2T = OpTypeVec._(floatT, 2);
+const vec3T = OpTypeVec._(floatT, 3);
+const vec4T = OpTypeVec._(floatT, 4);
+
+List<int> _toWords(String string) => [
+  ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
+  0,  // null padding
+];
 
 class OpCapability extends Instruction {
-  static final matrix = const OpCapability._(0);
-  static final shader = const OpCapability._(1);
-  static final linkage = const OpCapability._(5);
+  static const matrix = OpCapability._(0);
+  static const shader = OpCapability._(1);
+  static const linkage = OpCapability._(5);
 
   final int capability;
 
@@ -26,8 +31,45 @@ class OpCapability extends Instruction {
   List<int> operands(Identifier i) => [capability];
 }
 
+class OpDecorate extends Instruction {
+  final Instruction target;
+  final int decoration;
+  final List<int> extraOperands;
+  final List<Instruction> deps;
+
+  static const int linkageAttributes = 41;
+  static const int linkageExport = 0;
+
+  OpDecorate({
+    this.decoration,
+    this.extraOperands,
+    this.target,
+  }) : deps = [target], super(
+    opCode: 71,
+    isDecoration: true,
+  );
+
+  OpDecorate.export({
+    Instruction target,
+    String name,
+  }) : this(
+    target: target,
+    decoration: linkageAttributes,
+    extraOperands: [
+      ..._toWords(name),
+      linkageExport,
+    ],
+  );
+
+  List<int> operands(Identifier i) => [
+    i.identify(target),
+    decoration,
+    ...extraOperands,
+  ];
+}
+
 class OpExtInstImport extends Instruction {
-  static final glsl = const OpExtInstImport._('GLSL.std.450');
+  static const glsl = OpExtInstImport._('GLSL.std.450');
 
   final String name;
 
@@ -37,14 +79,11 @@ class OpExtInstImport extends Instruction {
           opCode: 11,
         );
 
-  List<int> operands(Identifier i) => [
-        ...Uint8List.fromList(utf8.encode(name)).buffer.asInt32List(),
-        0, // null padding
-      ];
+  List<int> operands(Identifier i) => _toWords(name);
 }
 
 class OpMemoryModel extends Instruction {
-  static final glsl = const OpMemoryModel._();
+  static const glsl = OpMemoryModel._();
 
   const OpMemoryModel._()
       : super(

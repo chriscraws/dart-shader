@@ -44,6 +44,8 @@ class Module extends Identifier {
   ByteBuffer encode() {
     _ids.clear();
 
+    final main = OpFunction(_mainType);
+
     final instructions = <Instruction>[
       // capabilities
       OpCapability.matrix,
@@ -55,6 +57,12 @@ class Module extends Identifier {
 
       // memory model
       OpMemoryModel.glsl,
+
+      // decorations
+      OpDecorate.export(
+        name: 'main',
+        target: main,
+      ),
 
       // type delcarations
       floatT,
@@ -78,7 +86,7 @@ class Module extends Identifier {
 
     // add function declaration opening
     instructions.addAll([
-      OpFunction(_mainType),
+      main,
       _position,
       OpLabel(),
     ]);

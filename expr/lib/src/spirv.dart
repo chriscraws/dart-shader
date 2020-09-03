@@ -383,6 +383,9 @@ class OpConstantComposite extends Instruction {
 
   OpConstantComposite.vec2(double x, double y) : this._(vec2T, [x, y]);
 
+  OpConstantComposite.vec3(double x, double y, double z)
+      : this._(vec3T, [x, y, z]);
+
   OpConstantComposite.vec4(double x, double y, double z, double w)
       : this._(vec4T, [x, y, z, w]);
 
@@ -442,4 +445,38 @@ class OpFMul extends BinOp {
 
 class OpFDiv extends BinOp {
   OpFDiv(Instruction a, Instruction b) : super(136, a, b);
+}
+
+class OpFMod extends BinOp {
+  OpFMod(Instruction a, Instruction b) : super(141, a, b);
+}
+
+class OpFDot extends Instruction {
+  final Instruction a;
+  final Instruction b;
+
+  OpFDot(this.a, this.b)
+      : assert(a.type == b.type),
+        super._(
+          type: floatT,
+          result: true,
+          opCode: 148,
+        );
+
+  List<Instruction> get deps => [a, b];
+}
+
+class OpVectorTimesScalar extends Instruction {
+  final Instruction a;
+  final Instruction b;
+
+  OpVectorTimesScalar(this.a, this.b)
+      : assert(a.type != floatT),
+        super._(
+          type: a.type,
+          result: true,
+          opCode: 142,
+        );
+
+  List<Instruction> get deps => [a, b];
 }

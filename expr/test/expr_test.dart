@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:expr/expr.dart';
 
 class SimpleFragment extends Fragment {
-  Vec4 build(Context context) => Vec4(0.25, 0.5, 0.75, 1);
+  Vec4 get color => Vec4(0.25, 0.5, 0.75, 1);
 }
 
 final overwriteGoldens = false;

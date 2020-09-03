@@ -1,6 +1,7 @@
 // This file contains constants and classes exposing GLSL.std.450 external
 // instructions for SPIR-V.
-import 'spirv.dart';
+import 'instruction.dart';
+import 'instructions.dart';
 
 // OpCodes defined at
 // https://www.khronos.org/registry/spir-v/specs/1.0/GLSL.std.450.html

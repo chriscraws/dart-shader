@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:vector_math/vector_math.dart' as vm;
 
-import 'spirv.dart' as spirv;
+import './spirv/spirv.dart' as spirv;
 
 // Fragment can be used to construct a spir-v module
 // compatible with Flutter.

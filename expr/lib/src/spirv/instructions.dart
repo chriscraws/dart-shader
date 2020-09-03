@@ -1,163 +1,25 @@
-// This file contains spir-v constants, adapted from the SPIR-V
-// specification at version 1.5. It also contains contants from
-// the OpenGL Extended Instruction Set. This file only contains constants
-// used in this package, it can be extended as necessary.
+// This file contains class representations of SPIR-V instructions
+// from https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_instructions_a_instructions
 
 import 'dart:convert';
-import 'dart:collection';
 import 'dart:typed_data';
 
-final _magicNumber = 0x07230203;
+import 'instruction.dart';
 
-final _version = 0x00010500;
-
-final _glslExtInstImport = const OpExtInstImport._('GLSL.std.450');
-
-final _utf8Encoder = Utf8Encoder();
-
-final _matrixCapability = const OpCapability._(0);
-final _linkageCapability = const OpCapability._(5);
-final _shaderCapability = const OpCapability._(1);
-
-final _memoryModel = const OpMemoryModel._();
-
-abstract class Identifier {
-  int identify(Instruction inst);
-}
-
-class Module extends Identifier {
-  final _ids = <Instruction, int>{};
-
-  int _bound = 0;
-  List<Instruction> _main;
-
-  int identify(Instruction inst) {
-    if (_ids.containsKey(inst)) {
-      return _ids[inst];
-    }
-
-    int id = ++_bound;
-    _ids[inst] = id;
-    return id;
-  }
-
-  set main(Instruction fragColor) {
-    assert(fragColor.type == vec4T);
-    final pos = OpFunctionParameter(vec2T);
-    final fnType = OpTypeFunction._(
-      returnType: vec4T,
-      paramTypes: [vec2T],
-    );
-    final fun = OpFunction._(fnType);
-    _main = [
-      fun,
-      pos,
-      OpLabel._(),
-      OpReturnValue._(fragColor),
-      _opFunctionEnd,
-    ];
-  }
-
-  ByteBuffer encode() {
-    _ids.clear();
-
-    final instructions = <Instruction>[
-      // capabilities
-      _matrixCapability,
-      _shaderCapability,
-      _linkageCapability,
-
-      // extension instruction imports
-      _glslExtInstImport,
-
-      // memory model
-      _memoryModel,
-
-      // type delcarations
-      floatT,
-      vec2T,
-      vec3T,
-      vec4T,
-    ];
-
-    // get main definition, and identify all dependent instructions.
-    for (final inst in _main) {
-      inst.resolve(this);
-    }
-
-    // insert all instruction/id pairs into a sorted map
-    final sortedMap = SplayTreeMap.fromIterables(
-      _ids.values, // ids as keys
-      _ids.keys, // instructions as values
-    );
-
-    // add all instructions required by main, in order
-    instructions.addAll(sortedMap.values
-        .where((i) => !instructions.contains(i) && !_main.contains(i)));
-
-    final words = <int>[
-      _magicNumber,
-      _version,
-      0, // generator's magic number
-      0, // bound
-      0, // reserved.
-    ];
-
-    for (final instruction in instructions) {
-      words.addAll(instruction.encode(this));
-    }
-
-    words.addAll(_main.map((i) => i.encode(this)).expand((words) => words));
-
-    words[3] = _bound + 1;
-
-    return Int32List.fromList(words).buffer;
-  }
-}
-
-abstract class Instruction {
-  final Type type;
-  final int opCode;
-  final bool result;
-
-  const Instruction._({
-    this.opCode,
-    this.type,
-    this.result = false,
-  });
-
-  void resolve(Identifier i) {
-    for (final dep in deps) {
-      dep.resolve(i);
-    }
-    if (result) {
-      i.identify(this);
-    }
-  }
-
-  List<int> operands(Identifier i) => [];
-
-  List<int> encode(Identifier i) {
-    final ops = operands(i);
-    int wordCount = ops.length + 1;
-    if (type != null) wordCount++;
-    if (result) wordCount++;
-    return <int>[
-      wordCount << 16 | opCode,
-      if (type != null) i.identify(type),
-      if (result) i.identify(this),
-      ...ops,
-    ];
-  }
-
-  List<Instruction> get deps => [];
-}
+final floatT = const OpTypeFloat._(32);
+final vec2T = OpTypeVec._(floatT, 2);
+final vec3T = OpTypeVec._(floatT, 3);
+final vec4T = OpTypeVec._(floatT, 4);
 
 class OpCapability extends Instruction {
+  static final matrix = const OpCapability._(0);
+  static final shader = const OpCapability._(1);
+  static final linkage = const OpCapability._(5);
+
   final int capability;
 
   const OpCapability._(this.capability)
-      : super._(
+      : super(
           opCode: 17,
         );
 
@@ -165,36 +27,38 @@ class OpCapability extends Instruction {
 }
 
 class OpExtInstImport extends Instruction {
+  static final glsl = const OpExtInstImport._('GLSL.std.450');
+
   final String name;
 
   const OpExtInstImport._(this.name)
-      : super._(
+      : super(
           result: true,
           opCode: 11,
         );
 
   List<int> operands(Identifier i) => [
-        ..._utf8Encoder.convert(name).buffer.asInt32List(),
+        ...Uint8List.fromList(utf8.encode(name)).buffer.asInt32List(),
         0, // null padding
       ];
 }
 
 class OpMemoryModel extends Instruction {
+  static final glsl = const OpMemoryModel._();
+
   const OpMemoryModel._()
-      : super._(
+      : super(
           opCode: 14,
         );
 
   List<int> operands(Identifier i) => [0, 1];
 }
 
-mixin Type on Instruction {}
-
 class OpTypeFloat extends Instruction with Type {
   final int bitWidth;
 
   const OpTypeFloat._(this.bitWidth)
-      : super._(
+      : super(
           result: true,
           opCode: 22,
         );
@@ -209,7 +73,7 @@ class OpTypeVec extends Instruction with Type {
   const OpTypeVec._(this.componentType, this.dimensions)
       : assert(componentType != null),
         assert(dimensions > 1),
-        super._(
+        super(
           result: true,
           opCode: 23,
         );
@@ -222,27 +86,15 @@ class OpTypeVec extends Instruction with Type {
   List<Instruction> get deps => [componentType];
 }
 
-class Precision {
-  final int bitWidth;
-  const Precision._(this.bitWidth);
-}
-
-final mediumP = Precision._(32);
-
-final floatT = const OpTypeFloat._(32);
-final vec2T = OpTypeVec._(floatT, 2);
-final vec3T = OpTypeVec._(floatT, 3);
-final vec4T = OpTypeVec._(floatT, 4);
-
 class OpTypeFunction extends Instruction {
   final Type returnType;
   final List<Type> paramTypes;
 
-  OpTypeFunction._({
+  OpTypeFunction({
     this.returnType,
     this.paramTypes = const [],
   })  : assert(returnType != null),
-        super._(
+        super(
           opCode: 33,
           result: true,
         );
@@ -257,8 +109,8 @@ class OpTypeFunction extends Instruction {
 
 class OpFunction extends Instruction {
   final OpTypeFunction fnType;
-  OpFunction._(this.fnType)
-      : super._(
+  OpFunction(this.fnType)
+      : super(
           result: true,
           type: fnType.returnType,
           opCode: 54,
@@ -273,17 +125,15 @@ class OpFunction extends Instruction {
 }
 
 class OpFunctionEnd extends Instruction {
-  const OpFunctionEnd._()
-      : super._(
+  const OpFunctionEnd()
+      : super(
           opCode: 56,
         );
 }
 
-final _opFunctionEnd = const OpFunctionEnd._();
-
 class OpFunctionParameter extends Instruction {
   const OpFunctionParameter(Type type)
-      : super._(
+      : super(
           type: type,
           opCode: 55,
           result: true,
@@ -291,8 +141,8 @@ class OpFunctionParameter extends Instruction {
 }
 
 class OpLabel extends Instruction {
-  const OpLabel._()
-      : super._(
+  const OpLabel()
+      : super(
           opCode: 248,
           result: true,
         );
@@ -301,8 +151,8 @@ class OpLabel extends Instruction {
 class OpReturnValue extends Instruction {
   final Instruction value;
 
-  const OpReturnValue._(this.value)
-      : super._(
+  const OpReturnValue(this.value)
+      : super(
           opCode: 254,
         );
 
@@ -315,7 +165,7 @@ class OpConstant extends Instruction {
   final double value;
 
   OpConstant(this.value)
-      : super._(
+      : super(
           type: floatT,
           result: true,
           opCode: 43,
@@ -333,7 +183,7 @@ class OpConstantComposite extends Instruction {
         assert(constituants.length > 1),
         assert(constituants.every((c) => c != null)),
         constituants = constituants.map((v) => OpConstant(v)).toList(),
-        super._(
+        super(
           type: type,
           result: true,
           opCode: 44,
@@ -360,7 +210,7 @@ class UniOp extends Instruction {
   UniOp(int opCode, this.a)
       : assert(opCode != null),
         assert(a != null),
-        super._(
+        super(
           type: a.type,
           result: true,
           opCode: opCode,
@@ -380,7 +230,7 @@ class BinOp extends Instruction {
 
   BinOp(int opCode, this.a, this.b)
       : assert(a.type == b.type),
-        super._(
+        super(
           type: a.type,
           result: true,
           opCode: opCode,
@@ -415,7 +265,7 @@ class OpFDot extends Instruction {
 
   OpFDot(this.a, this.b)
       : assert(a.type == b.type),
-        super._(
+        super(
           type: floatT,
           result: true,
           opCode: 148,
@@ -430,7 +280,7 @@ class OpVectorTimesScalar extends Instruction {
 
   OpVectorTimesScalar(this.a, this.b)
       : assert(a.type != floatT),
-        super._(
+        super(
           type: a.type,
           result: true,
           opCode: 142,
@@ -446,14 +296,14 @@ abstract class OpExtInst extends Instruction {
   OpExtInst(this.extOp, this.deps)
       : assert(deps.length > 0),
         assert(!deps.any((dep) => dep.type != deps[0].type)),
-        super._(
+        super(
           opCode: 12,
           type: deps[0].type,
           result: true,
         );
 
   List<int> operands(Identifier i) => [
-        i.identify(_glslExtInstImport),
+        i.identify(OpExtInstImport.glsl),
         extOp,
         ...deps.map((inst) => i.identify(inst)),
       ];

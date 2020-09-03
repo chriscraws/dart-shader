@@ -15,8 +15,9 @@ final _utf8Encoder = Utf8Encoder();
 
 final _matrixCapability = const OpCapability._(0);
 final _linkageCapability = const OpCapability._(5);
+final _shaderCapability = const OpCapability._(1);
 
-final _glslExtInstImport = const OpExtInstImport._("GLSL.std.450");
+final _glslExtInstImport = const OpExtInstImport._('GLSL.std.450');
 
 final _memoryModel = const OpMemoryModel._();
 
@@ -67,42 +68,45 @@ abstract class Identifier {
 }
 
 class Module extends Identifier {
+  final _ids = <Instruction, int>{};
+
   int _bound = 0;
-  Map<Instruction, int> _ids;
-  OpFunction _main;
+  List<Instruction> _main;
 
   int identify(Instruction inst) {
     if (_ids.containsKey(inst)) {
       return _ids[inst];
     }
 
-    if (_bound == 0) {
-      _bound++;
-    }
-
-    int id = _bound;
-    _ids[inst] = _bound;
-    _bound++;
+    int id = ++_bound;
+    _ids[inst] = id;
     return id;
   }
 
   set main(Instruction fragColor) {
     assert(fragColor.type == vec4T);
     final pos = OpFunctionParameter(vec2T);
-    final block = Block._(
-      termination: OpReturnValue._(fragColor),
+    final fnType = OpTypeFunction._(
+      returnType: vec4T,
+      paramTypes: [vec2T],
     );
-    _main = OpFunction._(
-      type: vec4T,
-      params: [pos],
-      blocks: [block],
-    );
+    final fun = OpFunction._(fnType);
+    _main = [
+      fun,
+      pos,
+      OpLabel._(),
+      OpReturnValue._(fragColor),
+      _opFunctionEnd,
+    ];
   }
 
   ByteBuffer encode() {
+    _ids.clear();
+
     final instructions = <Instruction>[
       // capabilities
       _matrixCapability,
+      _shaderCapability,
       _linkageCapability,
 
       // extension instruction imports
@@ -118,10 +122,10 @@ class Module extends Identifier {
       vec4T,
     ];
 
-    _ids.clear();
-
     // get main definition, and identify all dependent instructions.
-    final mainWords = _main.encode(this);
+    for (final inst in _main) {
+      inst.resolve(this);
+    }
 
     // insert all instruction/id pairs into a sorted map
     final sortedMap = SplayTreeMap.fromIterables(
@@ -130,20 +134,24 @@ class Module extends Identifier {
     );
 
     // add all instructions required by main, in order
-    instructions.addAll(sortedMap.values);
+    instructions.addAll(sortedMap.values
+        .where((i) => !instructions.contains(i) && !_main.contains(i)));
 
     final words = <int>[
       _magicNumber,
       _version,
       0, // generator's magic number
-      _bound,
+      0, // bound
+      0, // reserved.
     ];
 
     for (final instruction in instructions) {
       words.addAll(instruction.encode(this));
     }
 
-    words.addAll(mainWords);
+    words.addAll(_main.map((i) => i.encode(this)).expand((words) => words));
+
+    words[3] = _bound + 1;
 
     return Int32List.fromList(words).buffer;
   }
@@ -160,17 +168,31 @@ abstract class Instruction {
     this.result = false,
   });
 
+  void resolve(Identifier i) {
+    for (final dep in deps) {
+      dep.resolve(i);
+    }
+    if (result) {
+      i.identify(this);
+    }
+  }
+
   List<int> operands(Identifier i) => [];
 
   List<int> encode(Identifier i) {
     final ops = operands(i);
+    int wordCount = ops.length + 1;
+    if (type != null) wordCount++;
+    if (result) wordCount++;
     return <int>[
-      ops.length << 16 | opCode,
+      wordCount << 16 | opCode,
       if (type != null) i.identify(type),
       if (result) i.identify(this),
       ...ops,
     ];
   }
+
+  List<Instruction> get deps => [];
 }
 
 class OpCapability extends Instruction {
@@ -189,10 +211,14 @@ class OpExtInstImport extends Instruction {
 
   const OpExtInstImport._(this.name)
       : super._(
-          opCode: 10,
+          result: true,
+          opCode: 11,
         );
 
-  List<int> operands(Identifier i) => _utf8Encoder.convert(name);
+  List<int> operands(Identifier i) => [
+        ..._utf8Encoder.convert(name).buffer.asInt32List(),
+        0, // null padding
+      ];
 }
 
 class OpMemoryModel extends Instruction {
@@ -201,7 +227,7 @@ class OpMemoryModel extends Instruction {
           opCode: 14,
         );
 
-  List<int> operands(Identifier i) => [0, 0];
+  List<int> operands(Identifier i) => [0, 1];
 }
 
 mixin Type on Instruction {}
@@ -234,6 +260,8 @@ class OpTypeVec extends Instruction with Type {
         i.identify(componentType),
         dimensions,
       ];
+
+  List<Instruction> get deps => [componentType];
 }
 
 class Precision {
@@ -248,26 +276,52 @@ final vec2T = OpTypeVec._(floatT, 2);
 final vec3T = OpTypeVec._(floatT, 3);
 final vec4T = OpTypeVec._(floatT, 4);
 
-const _opFunctionEnd = 1 << 16 | 56;
+class OpTypeFunction extends Instruction {
+  final Type returnType;
+  final List<Type> paramTypes;
+
+  OpTypeFunction._({
+    this.returnType,
+    this.paramTypes = const [],
+  })  : assert(returnType != null),
+        super._(
+          opCode: 33,
+          result: true,
+        );
+
+  List<int> operands(Identifier i) => [
+        i.identify(returnType),
+        ...paramTypes.map((t) => i.identify(t)),
+      ];
+
+  List<Instruction> get deps => [returnType];
+}
 
 class OpFunction extends Instruction {
-  final List<OpFunctionParameter> params;
-  final List<Block> blocks;
-
-  const OpFunction._({
-    Type type,
-    this.params,
-    this.blocks,
-  }) : super._(
-          type: type,
+  final OpTypeFunction fnType;
+  OpFunction._(this.fnType)
+      : super._(
+          result: true,
+          type: fnType.returnType,
           opCode: 54,
         );
 
-  List<int> operands(Identifier i) =>
-      params.map((p) => p.encode(i)).expand((words) => words).toList()
-        ..addAll(blocks.map((b) => b.encode(i)).expand((words) => words))
-        ..add(_opFunctionEnd);
+  List<int> operands(Identifier i) => [
+        8, // const function
+        i.identify(fnType), // function type
+      ];
+
+  List<Instruction> get deps => [fnType];
 }
+
+class OpFunctionEnd extends Instruction {
+  const OpFunctionEnd._()
+      : super._(
+          opCode: 56,
+        );
+}
+
+final _opFunctionEnd = const OpFunctionEnd._();
 
 class OpFunctionParameter extends Instruction {
   const OpFunctionParameter(Type type)
@@ -286,9 +340,7 @@ class OpLabel extends Instruction {
         );
 }
 
-mixin Branch on Instruction {}
-
-class OpReturnValue extends Instruction with Branch {
+class OpReturnValue extends Instruction {
   final Instruction value;
 
   const OpReturnValue._(this.value)
@@ -297,20 +349,8 @@ class OpReturnValue extends Instruction with Branch {
         );
 
   List<int> operands(Identifier i) => [i.identify(value)];
-}
 
-class Block {
-  final OpLabel label = OpLabel._();
-  final Branch termination;
-
-  Block._({
-    this.termination,
-  });
-
-  List<int> encode(Identifier i) => [
-        ...label.encode(i),
-        ...termination.encode(i),
-      ];
+  List<Instruction> get deps => [value];
 }
 
 class OpConstant extends Instruction {
@@ -348,6 +388,8 @@ class OpConstantComposite extends Instruction {
 
   List<int> operands(Identifier i) =>
       constituants.map((op) => i.identify(op)).toList();
+
+  List<Instruction> get deps => List<Instruction>.from(constituants);
 }
 
 // Numerical operation with one arguments.
@@ -362,6 +404,8 @@ class UniOp extends Instruction {
           result: true,
           opCode: opCode,
         );
+
+  List<Instruction> get deps => [a];
 }
 
 class OpFNegate extends UniOp {
@@ -380,6 +424,8 @@ class BinOp extends Instruction {
           result: true,
           opCode: opCode,
         );
+
+  List<Instruction> get deps => [a, b];
 }
 
 class OpFAdd extends BinOp {

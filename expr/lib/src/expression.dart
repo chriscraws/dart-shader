@@ -14,7 +14,7 @@ abstract class Fragment {
   Vec4 build(Context context);
 
   // Encode the fragment shader as Flutter-compatible SPIR-V.
-  ByteBuffer toSpirV() {
+  ByteBuffer toSPIRV() {
     final module = spirv.Module();
     module.main = build(Context._())._instruction;
     return module.encode();

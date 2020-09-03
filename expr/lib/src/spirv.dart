@@ -21,10 +21,6 @@ final _glslExtInstImport = const OpExtInstImport._('GLSL.std.450');
 
 final _memoryModel = const OpMemoryModel._();
 
-class _SourceLanguage {
-  static const unknown = 0;
-}
-
 class _GLInstructionID {
   static const trunc = 3;
   static const fabs = 4;
@@ -48,7 +44,6 @@ class _GLInstructionID {
   static const log2 = 30;
   static const sqrt = 31;
   static const inverseSqrt = 32;
-  static const modf = 35;
   static const fmin = 37;
   static const fmax = 40;
   static const fclamp = 43;
@@ -479,4 +474,161 @@ class OpVectorTimesScalar extends Instruction {
         );
 
   List<Instruction> get deps => [a, b];
+}
+
+abstract class OpExtInst extends Instruction {
+  final int extOp;
+  final List<Instruction> deps;
+
+  OpExtInst(this.extOp, this.deps)
+      : assert(deps.length > 0),
+        assert(!deps.any((dep) => dep.type != deps[0].type)),
+        super._(
+          opCode: 12,
+          type: deps[0].type,
+          result: true,
+        );
+}
+
+class Trunc extends OpExtInst {
+  Trunc(Instruction a) : super(_GLInstructionID.trunc, [a]);
+}
+
+class FAbs extends OpExtInst {
+  FAbs(Instruction a) : super(_GLInstructionID.fabs, [a]);
+}
+
+class FSign extends OpExtInst {
+  FSign(Instruction a) : super(_GLInstructionID.fsign, [a]);
+}
+
+class Floor extends OpExtInst {
+  Floor(Instruction a) : super(_GLInstructionID.floor, [a]);
+}
+
+class Ceil extends OpExtInst {
+  Ceil(Instruction a) : super(_GLInstructionID.ceil, [a]);
+}
+
+class Fract extends OpExtInst {
+  Fract(Instruction a) : super(_GLInstructionID.fract, [a]);
+}
+
+class Radians extends OpExtInst {
+  Radians(Instruction a) : super(_GLInstructionID.radians, [a]);
+}
+
+class Degrees extends OpExtInst {
+  Degrees(Instruction a) : super(_GLInstructionID.degrees, [a]);
+}
+
+class Sin extends OpExtInst {
+  Sin(Instruction a) : super(_GLInstructionID.sin, [a]);
+}
+
+class Cos extends OpExtInst {
+  Cos(Instruction a) : super(_GLInstructionID.cos, [a]);
+}
+
+class Tan extends OpExtInst {
+  Tan(Instruction a) : super(_GLInstructionID.tan, [a]);
+}
+
+class ASin extends OpExtInst {
+  ASin(Instruction a) : super(_GLInstructionID.asin, [a]);
+}
+
+class ACos extends OpExtInst {
+  ACos(Instruction a) : super(_GLInstructionID.acos, [a]);
+}
+
+class ATan extends OpExtInst {
+  ATan(Instruction a) : super(_GLInstructionID.atan, [a]);
+}
+
+class Exp extends OpExtInst {
+  Exp(Instruction a) : super(_GLInstructionID.exp, [a]);
+}
+
+class Log extends OpExtInst {
+  Log(Instruction a) : super(_GLInstructionID.log, [a]);
+}
+
+class Exp2 extends OpExtInst {
+  Exp2(Instruction a) : super(_GLInstructionID.exp2, [a]);
+}
+
+class Log2 extends OpExtInst {
+  Log2(Instruction a) : super(_GLInstructionID.log2, [a]);
+}
+
+class Sqrt extends OpExtInst {
+  Sqrt(Instruction a) : super(_GLInstructionID.sqrt, [a]);
+}
+
+class InverseSqrt extends OpExtInst {
+  InverseSqrt(Instruction a) : super(_GLInstructionID.inverseSqrt, [a]);
+}
+
+class Length extends OpExtInst {
+  Length(Instruction a) : super(_GLInstructionID.length, [a]);
+}
+
+class Normalize extends OpExtInst {
+  Normalize(Instruction a) : super(_GLInstructionID.normalize, [a]);
+}
+
+class ATan2 extends OpExtInst {
+  ATan2(Instruction a, Instruction b) : super(_GLInstructionID.atan2, [a, b]);
+}
+
+class Pow extends OpExtInst {
+  Pow(Instruction a, Instruction b) : super(_GLInstructionID.pow, [a, b]);
+}
+
+class FMin extends OpExtInst {
+  FMin(Instruction a, Instruction b) : super(_GLInstructionID.fmin, [a, b]);
+}
+
+class FMax extends OpExtInst {
+  FMax(Instruction a, Instruction b) : super(_GLInstructionID.fmax, [a, b]);
+}
+
+class FClamp extends OpExtInst {
+  FClamp(Instruction x, Instruction min, Instruction max)
+      : super(_GLInstructionID.fclamp, [x, min, max]);
+}
+
+class FMix extends OpExtInst {
+  FMix(Instruction x, Instruction y, Instruction a)
+      : super(_GLInstructionID.fmix, [x, y, a]);
+}
+
+class Step extends OpExtInst {
+  Step(Instruction edge, Instruction x)
+      : super(_GLInstructionID.step, [edge, x]);
+}
+
+class SmoothStep extends OpExtInst {
+  SmoothStep(Instruction edge0, Instruction edge1, Instruction x)
+      : super(_GLInstructionID.smoothstep, [edge0, edge1, x]);
+}
+
+class Distance extends OpExtInst {
+  Distance(Instruction a, Instruction b)
+      : super(_GLInstructionID.distance, [a, b]);
+}
+
+class Cross extends OpExtInst {
+  Cross(Instruction a, Instruction b) : super(_GLInstructionID.cross, [a, b]);
+}
+
+class FaceForward extends OpExtInst {
+  FaceForward(Instruction n, Instruction i)
+      : super(_GLInstructionID.faceforward, [n, i]);
+}
+
+class Reflect extends OpExtInst {
+  Reflect(Instruction i, Instruction n)
+      : super(_GLInstructionID.reflect, [i, n]);
 }

@@ -9,13 +9,19 @@ import 'instructions.dart';
 final _magicNumber = 0x07230203;
 final _version = 0x00010500;
 
+final _position = OpFunctionParameter(vec2T);
+final _mainType = OpTypeFunction(
+  returnType: vec4T,
+  paramTypes: [vec2T],
+);
+
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
 class Module extends Identifier {
   final _ids = <Instruction, int>{};
 
   int _bound = 0;
-  List<Instruction> _main;
+  Instruction _color;
 
   @override
   int identify(Instruction inst) {
@@ -29,21 +35,9 @@ class Module extends Identifier {
   }
 
   // main must be assiged before calling [encode].
-  set main(Instruction fragColor) {
-    assert(fragColor.type == vec4T);
-    final pos = OpFunctionParameter(vec2T);
-    final fnType = OpTypeFunction(
-      returnType: vec4T,
-      paramTypes: [vec2T],
-    );
-    final fun = OpFunction(fnType);
-    _main = [
-      fun,
-      pos,
-      OpLabel(),
-      OpReturnValue(fragColor),
-      OpFunctionEnd(),
-    ];
+  set color(Instruction vec4) {
+    assert(vec4.type == vec4T);
+    _color = vec4;
   }
 
   // Encode the module to binary SPIR-V.
@@ -67,12 +61,11 @@ class Module extends Identifier {
       vec2T,
       vec3T,
       vec4T,
+      _mainType,
     ];
 
     // get main definition, and identify all dependent instructions.
-    for (final inst in _main) {
-      inst.resolve(this);
-    }
+    _color.resolve(this);
 
     // insert all instruction/id pairs into a sorted map
     final sortedMap = SplayTreeMap.fromIterables(
@@ -80,9 +73,25 @@ class Module extends Identifier {
       _ids.keys, // instructions as values
     );
 
-    // add all instructions required by main, in order
+    // add variable declarations
+    instructions.addAll(sortedMap.values.where((i) => i.isDeclaration));
+
+    // add function declaration opening
+    instructions.addAll([
+      OpFunction(_mainType),
+      _position,
+      OpLabel(),
+    ]);
+
+    // add block
     instructions.addAll(sortedMap.values
-        .where((i) => !instructions.contains(i) && !_main.contains(i)));
+        .where((i) => !instructions.contains(i)));
+
+    // complete function declaration
+    instructions.addAll([
+      OpReturnValue(_color),
+      OpFunctionEnd(),
+    ]);
 
     final words = <int>[
       _magicNumber,
@@ -95,8 +104,6 @@ class Module extends Identifier {
     for (final instruction in instructions) {
       words.addAll(instruction.encode(this));
     }
-
-    words.addAll(_main.map((i) => i.encode(this)).expand((words) => words));
 
     words[3] = _bound + 1;
 

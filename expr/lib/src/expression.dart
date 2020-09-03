@@ -3,16 +3,24 @@ import 'package:vector_math/vector_math.dart' as vm;
 
 import './spirv/spirv.dart' as spirv;
 
-// Fragment can be used to construct a spir-v module
-// compatible with Flutter.
-abstract class Fragment {
-  // Build returns a Vec4 that specifies the color of each fragment position.
-  Vec4 get color;
+/// Exception that is thrown when a vector or matrix component
+/// is devided by zero.
+class DivideByZero implements Exception {
+  String toString() => 'Tried to divide component by zero.';
+}
 
-  // Encode the fragment shader as Flutter-compatible SPIR-V.
+/// Shader can be used to construct a spir-v module
+/// compatible with Flutter.
+class Shader {
+  /// The color of each fragment position.
+  final Vec4 color;
+
+  Shader({this.color}) : assert(color != null);
+
+  /// Encode the shader as Flutter-compatible SPIR-V.
   ByteBuffer toSPIRV() {
     final module = spirv.Module();
-    module.main = color._instruction;
+    module.color = color._instruction;
     return module.encode();
   }
 }
@@ -267,7 +275,12 @@ class _Divide extends _BinOp {
   _Divide(_Expression a, _Expression b)
       : super(a, b, spirv.OpFDiv(a._instruction, b._instruction));
 
-  double _op(double a, double b) => a / b;
+  double _op(double a, double b) {
+    if (b == 0) {
+      throw DivideByZero();
+    }
+    return a / b;
+  }
 }
 
 class _Mod extends _BinOp {

@@ -24,10 +24,18 @@ abstract class Instruction {
   /// SPIR-V code for the instruction.
   final int opCode;
 
+  // True if this instruction is a variable or constant declaration.
+  final bool isDeclaration;
+
+  // True if this instruction is a type declaration.
+  final bool isType;
+
   const Instruction({
     this.opCode,
     this.type,
     this.result = false,
+    this.isDeclaration = false,
+    this.isType = false,
   });
 
   /// Ensure that every Instruction included transitively

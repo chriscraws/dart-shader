@@ -61,6 +61,7 @@ class OpTypeFloat extends Instruction with Type {
       : super(
           result: true,
           opCode: 22,
+          isType: true,
         );
 
   List<int> operands(Identifier i) => [bitWidth];
@@ -76,6 +77,7 @@ class OpTypeVec extends Instruction with Type {
         super(
           result: true,
           opCode: 23,
+          isType: true,
         );
 
   List<int> operands(Identifier i) => [
@@ -97,6 +99,7 @@ class OpTypeFunction extends Instruction {
         super(
           opCode: 33,
           result: true,
+          isType: true,
         );
 
   List<int> operands(Identifier i) => [
@@ -166,9 +169,10 @@ class OpConstant extends Instruction {
 
   OpConstant(this.value)
       : super(
-          type: floatT,
-          result: true,
+          isDeclaration: true,
           opCode: 43,
+          result: true,
+          type: floatT,
         );
 
   List<int> operands(Identifier i) =>
@@ -184,9 +188,10 @@ class OpConstantComposite extends Instruction {
         assert(constituants.every((c) => c != null)),
         constituants = constituants.map((v) => OpConstant(v)).toList(),
         super(
+          isDeclaration: true,
+          opCode: 44,
           type: type,
           result: true,
-          opCode: 44,
         );
 
   OpConstantComposite.vec2(double x, double y) : this._(vec2T, [x, y]);
@@ -216,6 +221,8 @@ class UniOp extends Instruction {
           opCode: opCode,
         );
 
+  List<int> operands(Identifier i) => [i.identify(a)];
+
   List<Instruction> get deps => [a];
 }
 
@@ -235,6 +242,8 @@ class BinOp extends Instruction {
           result: true,
           opCode: opCode,
         );
+
+  List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
   List<Instruction> get deps => [a, b];
 }
@@ -280,11 +289,14 @@ class OpVectorTimesScalar extends Instruction {
 
   OpVectorTimesScalar(this.a, this.b)
       : assert(a.type != floatT),
+        assert(b.type == floatT),
         super(
           type: a.type,
           result: true,
           opCode: 142,
         );
+
+  List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
   List<Instruction> get deps => [a, b];
 }

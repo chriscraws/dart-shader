@@ -33,6 +33,8 @@ abstract class Scalar extends _Expression with Numerical {
   Scalar operator -() => _Scalar(_Negate(this));
   Scalar operator *(Scalar b) => _Scalar(_Multiply(this, b));
   Scalar operator /(Scalar b) => _Scalar(_Divide(this, b));
+
+  double evaluate() => _evaluate()[0];
 }
 
 abstract class Vec2 extends _Expression with Numerical {
@@ -59,6 +61,8 @@ abstract class _Expression {
   _Expression(this._instruction) : assert(_instruction != null);
 
   spirv.Type get _type;
+
+  List<double> _evaluate();
 }
 
 mixin Numerical on _Expression {}
@@ -69,6 +73,8 @@ class _ConstScalar extends Scalar {
   _ConstScalar(this.value)
       : assert(value != null),
         super._(spirv.OpConstant(value));
+
+  List<double> _evaluate() => [value];
 }
 
 class _ConstVec2 extends Vec2 {
@@ -79,6 +85,8 @@ class _ConstVec2 extends Vec2 {
       : assert(x != null),
         assert(y != null),
         super._(spirv.OpConstantComposite.vec2(x, y));
+
+  List<double> _evaluate() => [x, y];
 }
 
 class _ConstVec4 extends Vec4 {
@@ -93,13 +101,19 @@ class _ConstVec4 extends Vec4 {
         assert(z != null),
         assert(w != null),
         super._(spirv.OpConstantComposite.vec4(x, y, z, w));
+
+  List<double> _evaluate() => [x, y, z, w];
 }
 
 class _Scalar extends Scalar {
-  _Scalar(Numerical child)
+  final Numerical child;
+
+  _Scalar(this.child)
       : assert(child != null),
         assert(child._type == spirv.floatT),
         super._(child._instruction);
+
+  List<double> _evaluate() => child._evaluate();
 }
 
 class _Negate extends _Expression with Numerical {
@@ -110,6 +124,8 @@ class _Negate extends _Expression with Numerical {
         super(spirv.OpFNegate(a._instruction));
 
   spirv.Type get _type => a._type;
+
+  List<double> _evaluate() => a._evaluate().map((v) => -v).toList();
 }
 
 abstract class _BinOp extends _Expression with Numerical {
@@ -124,24 +140,42 @@ abstract class _BinOp extends _Expression with Numerical {
         super(instruction);
 
   spirv.Type get _type => a._type;
+
+  List<double> _apply(double Function(double a, double b) fn) {
+    final valueA = a._evaluate();
+    final valueB = b._evaluate();
+    final out = List<double>(valueA.length);
+    for (int i = 0; i < out.length; i++) {
+      out[i] = fn(valueA[i], valueB[i]);
+    }
+    return out;
+  }
 }
 
 class _Add extends _BinOp {
   _Add(_Expression a, _Expression b)
       : super(a, b, spirv.OpFAdd(a._instruction, b._instruction));
+
+  List<double> _evaluate() => _apply((a, b) => a + b);
 }
 
 class _Subtract extends _BinOp {
   _Subtract(_Expression a, _Expression b)
       : super(a, b, spirv.OpFSub(a._instruction, b._instruction));
+
+  List<double> _evaluate() => _apply((a, b) => a - b);
 }
 
 class _Multiply extends _BinOp {
   _Multiply(_Expression a, _Expression b)
       : super(a, b, spirv.OpFMul(a._instruction, b._instruction));
+
+  List<double> _evaluate() => _apply((a, b) => a * b);
 }
 
 class _Divide extends _BinOp {
   _Divide(_Expression a, _Expression b)
       : super(a, b, spirv.OpFDiv(a._instruction, b._instruction));
+
+  List<double> _evaluate() => _apply((a, b) => a / b);
 }

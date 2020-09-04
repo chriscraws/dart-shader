@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:vector_math/vector_math.dart' as vm;
 
 import './spirv/spirv.dart' as spirv;
+import './spirv/glsl.dart' as spirv;
 
 /// Exception that is thrown when a vector or matrix component
 /// is devided by zero.
@@ -232,16 +234,163 @@ class _Composite extends Expression {
       });
 }
 
-class _Negate extends Expression {
+abstract class _UniOp extends Expression {
   final Expression a;
 
-  _Negate(this.a)
-      : assert(a != null),
-        super._(spirv.OpFNegate(a._instruction));
+  _UniOp(this.a, spirv.Instruction instruction) : super._(instruction);
 
   spirv.Type get _type => a._type;
 
-  List<double> _evaluate() => a._evaluate().map((v) => -v).toList();
+  double _op(double a);
+
+  List<double> _evaluate() => a._evaluate().map(_op).toList();
+}
+
+class _Negate extends _UniOp {
+  _Negate(Expression a) : super(a, spirv.OpFNegate(a._instruction));
+
+  @override
+  double _op(double a) => -a;
+}
+
+class _Trunc extends _UniOp {
+  _Trunc(Expression a) : super(a, spirv.Trunc(a._instruction));
+
+  @override
+  double _op(double a) => a.truncateToDouble();
+}
+
+class _FAbs extends _UniOp {
+  _FAbs(Expression a) : super(a, spirv.FAbs(a._instruction));
+
+  @override
+  double _op(double a) => a.abs();
+}
+
+class _FSign extends _UniOp {
+  _FSign(Expression a) : super(a, spirv.FSign(a._instruction));
+
+  @override
+  double _op(double a) => a.sign;
+}
+
+class _Floor extends _UniOp {
+  _Floor(Expression a) : super(a, spirv.Floor(a._instruction));
+
+  @override
+  double _op(double a) => a.floorToDouble();
+}
+
+class _Ceil extends _UniOp {
+  _Ceil(Expression a) : super(a, spirv.Ceil(a._instruction));
+
+  @override
+  double _op(double a) => a.ceilToDouble();
+}
+
+class _Fract extends _UniOp {
+  _Fract(Expression a) : super(a, spirv.Fract(a._instruction));
+
+  @override
+  double _op(double a) => a - a.floorToDouble();
+}
+
+class _Radians extends _UniOp {
+  _Radians(Expression a) : super(a, spirv.Radians(a._instruction));
+
+  @override
+  double _op(double a) => vm.radians(a);
+}
+
+class _Degrees extends _UniOp {
+  _Degrees(Expression a) : super(a, spirv.Degrees(a._instruction));
+
+  @override
+  double _op(double a) => vm.degrees(a);
+}
+
+class _Sin extends _UniOp {
+  _Sin(Expression a) : super(a, spirv.Sin(a._instruction));
+
+  @override
+  double _op(double a) => sin(a);
+}
+
+class _Cos extends _UniOp {
+  _Cos(Expression a) : super(a, spirv.Cos(a._instruction));
+
+  @override
+  double _op(double a) => cos(a);
+}
+
+class _Tan extends _UniOp {
+  _Tan(Expression a) : super(a, spirv.Tan(a._instruction));
+
+  @override
+  double _op(double a) => tan(a);
+}
+
+class _ASin extends _UniOp {
+  _ASin(Expression a) : super(a, spirv.ASin(a._instruction));
+
+  @override
+  double _op(double a) => asin(a);
+}
+
+class _ACos extends _UniOp {
+  _ACos(Expression a) : super(a, spirv.ACos(a._instruction));
+
+  @override
+  double _op(double a) => acos(a);
+}
+
+class _ATan extends _UniOp {
+  _ATan(Expression a) : super(a, spirv.ATan(a._instruction));
+
+  @override
+  double _op(double a) => atan(a);
+}
+
+class _Exp extends _UniOp {
+  _Exp(Expression a) : super(a, spirv.Exp(a._instruction));
+
+  @override
+  double _op(double a) => exp(a);
+}
+
+class _Log extends _UniOp {
+  _Log(Expression a) : super(a, spirv.Log(a._instruction));
+
+  @override
+  double _op(double a) => log(a);
+}
+
+class _Exp2 extends _UniOp {
+  _Exp2(Expression a) : super(a, spirv.Exp2(a._instruction));
+
+  @override
+  double _op(double a) => pow(2, a);
+}
+
+class _Log2 extends _UniOp {
+  _Log2(Expression a) : super(a, spirv.Log2(a._instruction));
+
+  @override
+  double _op(double a) => log(a) / ln2;
+}
+
+class _Sqrt extends _UniOp {
+  _Sqrt(Expression a) : super(a, spirv.Sqrt(a._instruction));
+
+  @override
+  double _op(double a) => sqrt(a);
+}
+
+class _InverseSqrt extends _UniOp {
+  _InverseSqrt(Expression a) : super(a, spirv.InverseSqrt(a._instruction));
+
+  @override
+  double _op(double a) => 1.0 / sqrt(a);
 }
 
 abstract class _BinOp extends Expression {
@@ -310,6 +459,92 @@ class _Mod extends _BinOp {
   double _op(double a, double b) => a % b;
 }
 
+class _ATan2 extends _BinOp {
+  _ATan2(Expression a, Expression b)
+      : super(a, b, spirv.ATan2(a._instruction, b._instruction));
+
+  @override
+  double _op(double a, double b) => atan2(a, b);
+}
+
+class _Pow extends _BinOp {
+  _Pow(Expression a, Expression b)
+      : super(a, b, spirv.Pow(a._instruction, b._instruction));
+
+  @override
+  double _op(double a, double b) => pow(a, b);
+}
+
+class _FMin extends _BinOp {
+  _FMin(Expression a, Expression b)
+      : super(a, b, spirv.FMin(a._instruction, b._instruction));
+
+  @override
+  double _op(double a, double b) => min(a, b);
+}
+
+class _FMax extends _BinOp {
+  _FMax(Expression a, Expression b)
+      : super(a, b, spirv.FMax(a._instruction, b._instruction));
+
+  @override
+  double _op(double a, double b) => max(a, b);
+}
+
+class _Step extends _BinOp {
+  _Step(Expression edge, Expression x)
+      : super(edge, x, spirv.Step(edge._instruction, x._instruction));
+
+  @override
+  double _op(double edge, double x) => x < edge ? 0 : 1;
+}
+
+double _length(List<double> vector) {
+  double sum = 0;
+  for (int i = 0; i < vector.length; i++) {
+    final el = vector[i];
+    sum += el * el;
+  }
+  return sqrt(sum);
+}
+
+class _Length extends Scalar {
+  final Expression a;
+
+  _Length(this.a)
+      : assert(a._type != null),
+        assert(a._type != spirv.floatT),
+        super._(spirv.Length(a._instruction));
+
+  List<double> _evaluate() => [_length(a._evaluate())];
+}
+
+class _Normalize extends Scalar {
+  final Expression a;
+
+  _Normalize(this.a)
+      : assert(a._type != null),
+        assert(a._type != spirv.floatT),
+        super._(spirv.Normalize(a._instruction));
+
+  List<double> _evaluate() {
+    final aResult = a._evaluate();
+    final len = _length(aResult);
+    for (int i = 0; i < aResult.length; i++) {
+      aResult[i] /= len;
+    }
+    return aResult;
+  }
+}
+
+double _dot(List<double> a, List<double> b) {
+  double sum = 0;
+  for (int i = 0; i < a.length; i++) {
+    sum += a[i] * b[i];
+  }
+  return sum;
+}
+
 class _Dot extends Scalar {
   final Expression a;
   final Expression b;
@@ -319,15 +554,7 @@ class _Dot extends Scalar {
         assert(b._type != spirv.floatT),
         super._(spirv.OpFDot(a._instruction, b._instruction));
 
-  List<double> _evaluate() {
-    double sum = 0;
-    final aResult = a._evaluate();
-    final bResult = b._evaluate();
-    for (int i = 0; i < aResult.length; i++) {
-      sum += aResult[i] * bResult[i];
-    }
-    return [sum];
-  }
+  List<double> _evaluate() => [_dot(a._evaluate(), b._evaluate())];
 }
 
 class _Scale extends Expression {
@@ -343,5 +570,109 @@ class _Scale extends Expression {
   List<double> _evaluate() {
     double scale = b.evaluate();
     return a._evaluate().map((x) => x * scale).toList();
+  }
+}
+
+abstract class _TerOp extends Expression {
+  final Expression a;
+  final Expression b;
+  final Expression c;
+
+  _TerOp(this.a, this.b, this.c, spirv.Instruction instruction)
+      : assert(a != null),
+        assert(b != null),
+        assert(c != null),
+        assert(a._type == b._type && b._type == c._type),
+        assert(instruction != null),
+        super._(instruction);
+
+  double _op(double a, double b, double c) => 0;
+
+  spirv.Type get _type => a._type;
+
+  List<double> _evaluate() {
+    final valueA = a._evaluate();
+    final valueB = b._evaluate();
+    final valueC = c._evaluate();
+    final out = List<double>(valueA.length);
+    for (int i = 0; i < out.length; i++) {
+      out[i] = _op(valueA[i], valueB[i], valueC[i]);
+    }
+    return out;
+  }
+}
+
+class _Clamp extends _TerOp {
+  _Clamp(Expression a, Expression b, Expression c)
+      : super(a, b, c,
+            spirv.FClamp(a._instruction, b._instruction, c._instruction));
+
+  double _op(double a, double b, double c) => min(max(a, b), c);
+}
+
+class _Mix extends _TerOp {
+  _Mix(Expression x, Expression y, Expression a)
+      : super(x, y, a,
+            spirv.FMix(x._instruction, y._instruction, a._instruction));
+
+  double _op(double x, double y, double a) => vm.mix(x, y, a);
+}
+
+class _SmoothStep extends _TerOp {
+  _SmoothStep(Expression x, Expression y, Expression a)
+      : super(x, y, a,
+            spirv.SmoothStep(x._instruction, y._instruction, a._instruction));
+
+  double _op(double x, double y, double a) => vm.smoothStep(x, y, a);
+}
+
+class _FaceForward extends Expression {
+  final Expression n;
+  final Expression i;
+  final Expression nref;
+
+  _FaceForward(this.n, this.i, this.nref)
+      : assert(n != null),
+        assert(i != null),
+        assert(nref != null),
+        assert(n._type != null),
+        assert(n._type != spirv.floatT),
+        assert(n._type == i._type && i._type == nref._type),
+        super._(
+          spirv.FaceForward(n._instruction, i._instruction, nref._instruction),
+        );
+
+  spirv.Type get _type => n._type;
+
+  @override
+  List<double> _evaluate() => _dot(i._evaluate(), nref._evaluate()) < 0
+      ? n._evaluate()
+      : n._evaluate().map((i) => -i).toList();
+}
+
+class _Reflect extends Expression {
+  final Expression i;
+  final Expression n;
+
+  _Reflect(this.i, this.n)
+      : assert(i != null),
+        assert(n != null),
+        assert(i._type != null),
+        assert(i._type != spirv.floatT),
+        assert(i._type == n._type),
+        super._(spirv.Reflect(i._instruction, n._instruction));
+
+  spirv.Type get _type => i._type;
+
+  @override
+  List<double> _evaluate() {
+    final iRes = i._evaluate();
+    final nRes = n._evaluate();
+    final dot = _dot(nRes, iRes);
+    final out = List<double>(iRes.length);
+    for (int index = 0; index < out.length; index++) {
+      out[index] = iRes[index] - 2.0 * dot * nRes[index];
+    }
+    return out;
   }
 }

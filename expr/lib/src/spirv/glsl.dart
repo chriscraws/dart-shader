@@ -171,7 +171,8 @@ class Cross extends OpExtInst {
 }
 
 class FaceForward extends OpExtInst {
-  FaceForward(Instruction n, Instruction i) : super(_faceforward, [n, i]);
+  FaceForward(Instruction n, Instruction i, Instruction nref)
+      : super(_faceforward, [n, i, nref]);
 }
 
 class Reflect extends OpExtInst {

@@ -1,6 +1,7 @@
 part of '../expr.dart';
 
-/// Base class for expression nodes.
+/// Abstract base class for mathematical expressions that can be
+/// evaluated at runtime and can be compiled to SPIR-V.
 abstract class Expression {
   final Node _node;
   Expression._(this._node);

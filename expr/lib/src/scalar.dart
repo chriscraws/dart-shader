@@ -1,5 +1,6 @@
 part of '../expr.dart';
 
+/// Floating-point [Expression].
 class Scalar extends Expression {
   Scalar._(Node child) : super._(child);
 
@@ -24,7 +25,7 @@ class Scalar extends Expression {
   /// Returns the difference of this and [b].
   Scalar operator -(Scalar b) => Scalar._(Node.subtract(this._node, b._node));
 
-  /// Equivalent to [this * Scalar(-1)].
+  /// Equivalent to `this * Scalar(-1)`.
   Scalar operator -() => Scalar._(Node.negate(this._node));
 
   /// Multiply by [b].

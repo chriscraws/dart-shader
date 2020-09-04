@@ -1,10 +1,14 @@
 part of '../expr.dart';
 
+/// Vector [Expression] with three components.
 class Vec3 extends Expression {
   Vec3._(Node child) : super._(child);
 
   /// Construct a constant Vec3 with value [x, y, z].
   Vec3(double x, double y, double z) : super._(Node.vec3(x, y, z));
+
+  /// Construct a constant Vec3 with value [x, x, x].
+  Vec3.all(double x) : super._(Node.vec3(x, x, x));
 
   /// Construct a Vec3 from existing Expressions. The total
   /// number of elements provided in [components] must be
@@ -27,7 +31,7 @@ class Vec3 extends Expression {
   /// Returns the difference of this vector and [b].
   Vec3 operator -(Vec3 b) => Vec3._(Node.subtract(this._node, b._node));
 
-  /// Equivalent to [this * Vec3(-1)].
+  /// Equivalent to `this * Vec3.all(-1)`.
   Vec3 operator -() => Vec3._(Node.negate(this._node));
 
   /// Multiply by [b]. Component-wise.
@@ -138,7 +142,7 @@ class Vec3 extends Expression {
       Vec3._(Node.faceForward(this._node, incident._node, reference._node));
 
   /// Calculate the reflection direction for an incident vector.
-  /// Returns [this - 2.0 * dot(normal, this) * normal].
+  /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec3 reflect(Vec3 normal) => Vec3._(Node.reflect(this._node, normal._node));
 
   vm.Vector3 evaluate() => vm.Vector3.array(_node.evaluate());

@@ -1,10 +1,14 @@
 part of '../expr.dart';
 
+/// Vector [Expression] with four components.
 class Vec4 extends Expression {
   Vec4._(Node child) : super._(child);
 
   /// Construct a constant Vec4 with value [x, y, z, w].
   Vec4(double x, double y, double z, double w) : super._(Node.vec4(x, y, z, w));
+
+  /// Construct a constant Vec4 with value [x, x, x, x].
+  Vec4.all(double x) : super._(Node.vec4(x, x, x, x));
 
   /// Construct Vec4 from existing expressions. The total number
   /// of elements in the expressions in [components] must be 4.
@@ -26,7 +30,7 @@ class Vec4 extends Expression {
   /// Returns the difference of this vector and [b].
   Vec4 operator -(Vec4 b) => Vec4._(Node.subtract(this._node, b._node));
 
-  /// Equivalent to [this * Vec4(-1)].
+  /// Equivalent to `this * Vec4.all(-1)`.
   Vec4 operator -() => Vec4._(Node.negate(this._node));
 
   /// Multiply by [b]. Component-wise.
@@ -137,7 +141,7 @@ class Vec4 extends Expression {
       Vec4._(Node.faceForward(this._node, incident._node, reference._node));
 
   /// Calculate the reflection direction for an incident vector.
-  /// Returns [this - 2.0 * dot(normal, this) * normal].
+  /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec4 reflect(Vec4 normal) => Vec4._(Node.reflect(this._node, normal._node));
 
   vm.Vector4 evaluate() => vm.Vector4.array(_node.evaluate());

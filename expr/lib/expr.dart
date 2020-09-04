@@ -1,3 +1,9 @@
+/// SSIR Expression library.
+///
+/// Mathematical expressions that can be evaluated by Dart at runtime,
+/// and can also be compiled to SPIR-V. Intended for use in Flutter.
+///
+/// See [Shader] to start.
 library expr;
 
 import 'dart:typed_data';

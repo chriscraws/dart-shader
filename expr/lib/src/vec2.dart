@@ -1,10 +1,14 @@
 part of '../expr.dart';
 
+/// Vector [Expression] with two components.
 class Vec2 extends Expression {
   Vec2._(Node child) : super._(child);
 
   /// Construct a constant Vec2 with value [x, y].
   Vec2(double x, double y) : super._(Node.vec2(x, y));
+
+  /// Construct a constant Vec2 with value [x, x].
+  Vec2.all(double x) : super._(Node.vec2(x, x));
 
   /// Construct from existing [Scalar] expressions.
   Vec2.of(Scalar x, Scalar y) : super._(Node.compositeVec2([x._node, y._node]));
@@ -24,7 +28,7 @@ class Vec2 extends Expression {
   /// Returns the difference of this vector and [b].
   Vec2 operator -(Vec2 b) => Vec2._(Node.subtract(this._node, b._node));
 
-  /// Equivalent to [this * Vec2(-1)].
+  /// Equivalent to `this * Vec2.all(-1)`.
   Vec2 operator -() => Vec2._(Node.negate(this._node));
 
   /// Multiply by [b]. Component-wise.
@@ -135,7 +139,7 @@ class Vec2 extends Expression {
       Vec2._(Node.faceForward(this._node, incident._node, reference._node));
 
   /// Calculate the reflection direction for an incident vector.
-  /// Returns [this - 2.0 * dot(normal, this) * normal].
+  /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec2 reflect(Vec2 normal) => Vec2._(Node.reflect(this._node, normal._node));
 
   vm.Vector2 evaluate() => vm.Vector2.array(_node.evaluate());

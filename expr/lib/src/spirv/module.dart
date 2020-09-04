@@ -92,8 +92,8 @@ class Module extends Identifier {
     ]);
 
     // add block
-    instructions.addAll(sortedMap.values
-        .where((i) => !instructions.contains(i)));
+    instructions
+        .addAll(sortedMap.values.where((i) => !instructions.contains(i)));
 
     // complete function declaration
     instructions.addAll([

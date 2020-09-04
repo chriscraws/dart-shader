@@ -65,7 +65,7 @@ abstract class Vec2 extends _Expression with Numerical {
 abstract class Vec3 extends _Expression with Numerical {
   Vec3._(spirv.Instruction instruction) : super(instruction);
 
-  spirv.Type get _type => spirv.vec2T;
+  spirv.Type get _type => spirv.vec3T;
 
   factory Vec3(double x, double y, double z) => _ConstVec3(x, y, z);
 
@@ -89,6 +89,9 @@ abstract class Vec4 extends _Expression with Numerical {
 
   factory Vec4(double x, double y, double z, double w) =>
       _ConstVec4(x, y, z, w);
+
+  factory Vec4.of(List<Numerical> components) =>
+      _Vec4(_Composite(components, spirv.vec4T));
 
   Vec4 operator +(Vec4 b) => _Vec4(_Add(this, b));
   Vec4 operator -(Vec4 b) => _Vec4(_Subtract(this, b));
@@ -210,6 +213,25 @@ class _Vec4 extends Vec4 {
         super._(child._instruction);
 
   List<double> _evaluate() => child._evaluate();
+}
+
+class _Composite extends _Expression with Numerical {
+  final List<Numerical> children;
+  final spirv.Type _type;
+  final int elementCount;
+
+  _Composite(this.children, this._type)
+      : assert(_type != null),
+        assert(children != null),
+        elementCount = children.length,
+        super(spirv.OpCompositeConstruct(
+          children.map((child) => child._instruction).toList(),
+        ));
+
+  List<double> _evaluate() => children.fold([], (out, child) {
+        out.addAll(child._evaluate());
+        return out;
+      });
 }
 
 class _Negate extends _Expression with Numerical {

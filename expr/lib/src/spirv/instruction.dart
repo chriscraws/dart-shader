@@ -9,7 +9,9 @@ abstract class Identifier {
 }
 
 /// It's helpful to identify types statically.
-mixin Type on Instruction {}
+mixin Type on Instruction {
+  int get elementCount;
+}
 
 /// Instructions are the next level of semantics in SPIR-V,
 /// they are essentially a grouping of words, that can be

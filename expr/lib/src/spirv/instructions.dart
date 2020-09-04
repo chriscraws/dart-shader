@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'instruction.dart';
+import 'spirv.dart';
 
 const floatT = OpTypeFloat._(32);
 const vec2T = OpTypeVec._(floatT, 2);
@@ -12,9 +13,9 @@ const vec3T = OpTypeVec._(floatT, 3);
 const vec4T = OpTypeVec._(floatT, 4);
 
 List<int> _toWords(String string) => [
-  ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
-  0,  // null padding
-];
+      ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
+      0, // null padding
+    ];
 
 class OpCapability extends Instruction {
   static const matrix = OpCapability._(0);
@@ -44,28 +45,29 @@ class OpDecorate extends Instruction {
     this.decoration,
     this.extraOperands,
     this.target,
-  }) : deps = [target], super(
-    opCode: 71,
-    isDecoration: true,
-  );
+  })  : deps = [target],
+        super(
+          opCode: 71,
+          isDecoration: true,
+        );
 
   OpDecorate.export({
     Instruction target,
     String name,
   }) : this(
-    target: target,
-    decoration: linkageAttributes,
-    extraOperands: [
-      ..._toWords(name),
-      linkageExport,
-    ],
-  );
+          target: target,
+          decoration: linkageAttributes,
+          extraOperands: [
+            ..._toWords(name),
+            linkageExport,
+          ],
+        );
 
   List<int> operands(Identifier i) => [
-    i.identify(target),
-    decoration,
-    ...extraOperands,
-  ];
+        i.identify(target),
+        decoration,
+        ...extraOperands,
+      ];
 }
 
 class OpExtInstImport extends Instruction {
@@ -96,6 +98,8 @@ class OpMemoryModel extends Instruction {
 class OpTypeFloat extends Instruction with Type {
   final int bitWidth;
 
+  final int elementCount = 1;
+
   const OpTypeFloat._(this.bitWidth)
       : super(
           result: true,
@@ -108,11 +112,11 @@ class OpTypeFloat extends Instruction with Type {
 
 class OpTypeVec extends Instruction with Type {
   final Type componentType;
-  final int dimensions;
+  final int elementCount;
 
-  const OpTypeVec._(this.componentType, this.dimensions)
+  const OpTypeVec._(this.componentType, this.elementCount)
       : assert(componentType != null),
-        assert(dimensions > 1),
+        assert(elementCount > 1),
         super(
           result: true,
           opCode: 23,
@@ -121,7 +125,7 @@ class OpTypeVec extends Instruction with Type {
 
   List<int> operands(Identifier i) => [
         i.identify(componentType),
-        dimensions,
+        elementCount,
       ];
 
   List<Instruction> get deps => [componentType];
@@ -338,6 +342,68 @@ class OpVectorTimesScalar extends Instruction {
   List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
   List<Instruction> get deps => [a, b];
+}
+
+Type _resolveVecType(int elCount) {
+  if (elCount == 1) {
+    return floatT;
+  } else if (elCount == 2) {
+    return vec2T;
+  } else if (elCount == 3) {
+    return vec3T;
+  }
+  return vec4T;
+}
+
+class OpVectorShuffle extends Instruction {
+  final Instruction source;
+  final List<int> indices;
+  final List<Instruction> deps;
+
+  OpVectorShuffle({
+    this.source,
+    this.indices,
+  })  : assert(source.type != floatT),
+        assert(indices != null),
+        assert(indices.length > 0),
+        assert(indices.length <= 4),
+        deps = [source],
+        super(
+          opCode: 79,
+          result: true,
+          type: _resolveVecType(indices.length),
+        );
+
+  List<int> operands(Identifier i) => [
+        i.identify(source),
+        i.identify(source),
+        ...indices,
+      ];
+}
+
+class OpCompositeConstruct extends Instruction {
+  final List<Instruction> deps;
+  final int elementCount;
+
+  static int _count(List<Instruction> instructions) =>
+      instructions.fold(0, (sum, i) => sum + i.type.elementCount);
+
+  OpCompositeConstruct(this.deps)
+      : assert(deps != null),
+        assert(deps.length > 1),
+        assert(deps.length <= 4),
+        assert(deps.every((child) => child.type != null)),
+        assert(_count(deps) <= 4),
+        elementCount = _count(deps),
+        super(
+          type: _resolveVecType(
+            deps.fold(0, (sum, child) => sum + child.type.elementCount),
+          ),
+          result: true,
+          opCode: 80,
+        );
+
+  List<int> operands(Identifier i) => deps.map(i.identify).toList();
 }
 
 abstract class OpExtInst extends Instruction {

@@ -112,9 +112,113 @@ abstract class Vec4 extends Expression {
   Vec4 operator *(Vec4 b) => _Vec4(_Multiply(this, b));
   Vec4 operator /(Vec4 b) => _Vec4(_Divide(this, b));
   Vec4 operator %(Vec4 b) => _Vec4(_Mod(this, b));
+  Vec4 operator ^(Vec4 b) => _Vec4(_Pow(this, b));
 
-  Scalar dot(Vec4 b) => _Scalar(_Dot(this, b));
+  /// Return the inverse tangent of `x / y`. Component-wise.
+  factory Vec4.aTan2(Vec4 x, Vec4 y) => _Vec4(_ATan2(x, y));
+
+  /// Return the minimum value between x and y. Component-wise.
+  factory Vec4.min(Vec4 x, Vec4 y) => _Vec4(_FMin(x, y));
+
+  /// Return the maximum value between x and y. Component-wise.
+  factory Vec4.max(Vec4 x, Vec4 y) => _Vec4(_FMax(x, y));
+
+  /// Length.
+  Scalar length() => _Length(this);
+
+  /// Dot product.
+  Scalar dot(Vec4 b) => _Dot(this, b);
+
+  /// Scale by [s].
   Vec4 scale(Scalar s) => _Vec4(_Scale(this, s));
+
+  /// Truncate. Component-wise.
+  Vec4 truncate() => _Vec4(_Trunc(this));
+
+  /// Absolute value. Component-wise.
+  Vec4 abs() => _Vec4(_FAbs(this));
+
+  /// Returns [1] for postive values and [-1] for negative values.
+  /// Component-wise.
+  Vec4 sign() => _Vec4(_FSign(this));
+
+  /// Strip decimals. Component-wise.
+  Vec4 floor() => _Vec4(_Floor(this));
+
+  /// Round up. Component-wise.
+  Vec4 ceil() => _Vec4(_Ceil(this));
+
+  /// Isolate the fractional (decimal) value. Component-wise.
+  Vec4 fract() => _Vec4(_Fract(this));
+
+  /// Converts degrees to radians. Component-wise.
+  Vec4 radians() => _Vec4(_Radians(this));
+
+  /// Converts radians to degrees. Component-wise.
+  Vec4 degrees() => _Vec4(_Degrees(this));
+
+  /// Interprets value as theta and calculates the sine. Component-wise.
+  Vec4 sin() => _Vec4(_Sin(this));
+
+  /// Interprets value as theta and calculates the cosine. Component-wise.
+  Vec4 cos() => _Vec4(_Cos(this));
+
+  /// Interprets value as theta and calculates the tangent. Component-wise.
+  Vec4 tan() => _Vec4(_Tan(this));
+
+  /// Inverse-sine. Component-wise.
+  Vec4 asin() => _Vec4(_ASin(this));
+
+  /// Inverse-cosine. Component-wise.
+  Vec4 acos() => _Vec4(_ACos(this));
+
+  /// Inverse-tangent. Component-wise.
+  Vec4 atan() => _Vec4(_ATan(this));
+
+  /// Natural exponent, e raised to the power of this value. Component-wise.
+  Vec4 exp() => _Vec4(_Exp(this));
+
+  /// Natural logarithm, base e. Component-wise.
+  Vec4 log() => _Vec4(_Log(this));
+
+  /// 2 raised to the power of this value. Component-wise.
+  Vec4 exp2() => _Vec4(_Exp2(this));
+
+  /// Base-2 logarithm. Component-wise.
+  Vec4 log2() => _Vec4(_Log2(this));
+
+  /// Square root. Component-wise.
+  Vec4 sqrt() => _Vec4(_Sqrt(this));
+
+  /// Inverse square root. [1 / sqrt(this)]. Component-wise.
+  Vec4 isqrt() => _Vec4(_InverseSqrt(this));
+
+  /// Normalize the vector. Divide all components by vector length.
+  Vec4 normalize() => _Vec4(_Normalize(this));
+
+  /// Step returns 0 if value is less than [edge], 1 otherwise. Component-wise.
+  Vec4 step(Vec4 edge) => _Vec4(_Step(edge, this));
+
+  /// Clamp restricts the value to be between min and max. Component-wise.
+  Vec4 clamp(Vec4 min, Vec4 max) => _Vec4(_Clamp(this, min, max));
+
+  /// Mix linearly interpolates between [a] and [b] as this value ranges from 0
+  /// to 1. Component-wise.
+  Vec4 mix(Vec4 a, Vec4 b) => _Vec4(_Mix(a, b, this));
+
+  /// Performs smooth Hermite interpolation between 0 and 1 as this value ranges
+  /// from [a] to [b]. Component-wise.
+  Vec4 smoothStep(Vec4 a, Vec4 b) => _Vec4(_SmoothStep(a, b, this));
+
+  /// Orients the vector to point away from a surface as defined by its normal.
+  /// Returns the vector unchanged if `dot(reference, incident)` is below zero.
+  /// Otherwise return the vector scaled by -1.
+  Vec4 faceForward(Vec4 incident, Vec4 reference) =>
+      _Vec4(_FaceForward(this, incident, reference));
+
+  /// Calculate the reflection direction for an incident vector.
+  /// Returns [this - 2.0 * dot(normal, this) * normal].
+  Vec4 reflect(Vec4 normal) => _Vec4(_Reflect(this, normal));
 
   vm.Vector4 evaluate() => vm.Vector4.array(_evaluate());
 }

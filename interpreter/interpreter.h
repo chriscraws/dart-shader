@@ -5,12 +5,18 @@
 #ifndef SSIR_INTERPRETER_INTERPRETER_H_
 #define SSIR_INTERPRETER_INTERPRETER_H_
 
+#include <memory>
 #include <string>
 
 namespace ssir {
 
 // Error codes for interpreting.
-enum Status { kSuccess = 0 };
+enum Status {
+  kSuccess = 0,
+  kFailedToInitialize = 1,
+  kInvalidData = 2,
+  kFailure = 3,
+};
 
 // Outcome of an Interpret call.
 struct Result {
@@ -21,15 +27,16 @@ struct Result {
 // Stub interpreter class.
 class Interpreter {
  public:
-  Interpreter() = default;
+  static std::unique_ptr<Interpreter> create();
 
   virtual ~Interpreter() = default;
 
-  virtual void SetData(const char* data, size_t length) = 0;
-
-  virtual Result Interpret() = 0;
+  virtual Result Interpret(const char* data, size_t length) = 0;
 
   virtual std::string WriteSKSL() = 0;
+
+ protected:
+  Interpreter() = default;
 };
 
 }  // namespace ssir

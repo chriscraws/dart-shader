@@ -19,6 +19,7 @@ final _mainType = OpTypeFunction(
 /// an Instruction representing fragment color for a shader.
 class Module extends Identifier {
   final _ids = <Instruction, int>{};
+  final _constants = <Instruction>{};
 
   int _bound = 0;
   Instruction _color;
@@ -27,6 +28,17 @@ class Module extends Identifier {
   int identify(Instruction inst) {
     if (_ids.containsKey(inst)) {
       return _ids[inst];
+    }
+
+    if (inst.constant != null) {
+      final constant = _constants.singleWhere(
+        (c) => c.constant == inst.constant,
+        orElse: () => null,
+      );
+      if (constant != null) {
+        return _ids[constant];
+      }
+      _constants.add(inst);
     }
 
     int id = ++_bound;

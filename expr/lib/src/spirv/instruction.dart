@@ -35,9 +35,13 @@ abstract class Instruction {
   // True if this instruction is a decoration.
   final bool isDecoration;
 
+  // Null if not a constant, otherwise, the constant value.
+  final double constant;
+
   const Instruction({
     this.opCode,
     this.type,
+    this.constant,
     this.result = false,
     this.isDeclaration = false,
     this.isType = false,

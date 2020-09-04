@@ -208,10 +208,9 @@ class OpReturnValue extends Instruction {
 }
 
 class OpConstant extends Instruction {
-  final double value;
-
-  OpConstant(this.value)
+  OpConstant(double value)
       : super(
+          constant: value,
           isDeclaration: true,
           opCode: 43,
           result: true,
@@ -219,7 +218,7 @@ class OpConstant extends Instruction {
         );
 
   List<int> operands(Identifier i) =>
-      Float32List.fromList([value]).buffer.asInt32List();
+      Float32List.fromList([constant]).buffer.asInt32List();
 }
 
 class OpConstantComposite extends Instruction {

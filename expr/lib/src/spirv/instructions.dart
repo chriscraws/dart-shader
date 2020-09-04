@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'instruction.dart';
-import 'spirv.dart';
 
 const floatT = OpTypeFloat._(32);
 const vec2T = OpTypeVec._(floatT, 2);

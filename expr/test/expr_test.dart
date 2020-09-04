@@ -15,7 +15,6 @@ Future<void> matchGolden(ByteBuffer item, String filename) async {
   assert(filename != null);
   final file = File('goldens/' + filename);
   if (overwriteGoldens) {
-    print(Directory.current);
     await file.writeAsBytes(item.asUint8List(), flush: true);
   }
   expect(item.asUint8List(), equals(await file.readAsBytes()));

@@ -1,10 +1,10 @@
 library expr;
 
-import 'dart:math';
 import 'dart:typed_data';
 import 'package:vector_math/vector_math.dart' as vm;
 
-import 'src/spirv/spirv.dart' as spirv;
+import 'src/spirv/module.dart';
+import 'src/spirv/node.dart';
 
 part 'src/expression.dart';
 part 'src/scalar.dart';

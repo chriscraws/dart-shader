@@ -25,8 +25,19 @@ class Shader {
   }
 }
 
-abstract class Scalar extends _Expression with Numerical {
-  Scalar._(spirv.Instruction inst) : super(inst);
+/// Node within an SSIR abstract syntax tree.
+abstract class Expression {
+  final spirv.Instruction _instruction;
+
+  Expression._(this._instruction) : assert(_instruction != null);
+
+  spirv.Type get _type;
+
+  List<double> _evaluate();
+}
+
+abstract class Scalar extends Expression {
+  Scalar._(spirv.Instruction inst) : super._(inst);
 
   spirv.Type get _type => spirv.floatT;
 
@@ -42,8 +53,8 @@ abstract class Scalar extends _Expression with Numerical {
   double evaluate() => _evaluate()[0];
 }
 
-abstract class Vec2 extends _Expression with Numerical {
-  Vec2._(spirv.Instruction instruction) : super(instruction);
+abstract class Vec2 extends Expression {
+  Vec2._(spirv.Instruction instruction) : super._(instruction);
 
   spirv.Type get _type => spirv.vec2T;
 
@@ -62,8 +73,8 @@ abstract class Vec2 extends _Expression with Numerical {
   vm.Vector2 evaluate() => vm.Vector2.array(_evaluate());
 }
 
-abstract class Vec3 extends _Expression with Numerical {
-  Vec3._(spirv.Instruction instruction) : super(instruction);
+abstract class Vec3 extends Expression {
+  Vec3._(spirv.Instruction instruction) : super._(instruction);
 
   spirv.Type get _type => spirv.vec3T;
 
@@ -82,15 +93,15 @@ abstract class Vec3 extends _Expression with Numerical {
   vm.Vector3 evaluate() => vm.Vector3.array(_evaluate());
 }
 
-abstract class Vec4 extends _Expression with Numerical {
-  Vec4._(spirv.Instruction instruction) : super(instruction);
+abstract class Vec4 extends Expression {
+  Vec4._(spirv.Instruction instruction) : super._(instruction);
 
   spirv.Type get _type => spirv.vec4T;
 
   factory Vec4(double x, double y, double z, double w) =>
       _ConstVec4(x, y, z, w);
 
-  factory Vec4.of(List<Numerical> components) =>
+  factory Vec4.of(List<Expression> components) =>
       _Vec4(_Composite(components, spirv.vec4T));
 
   Vec4 operator +(Vec4 b) => _Vec4(_Add(this, b));
@@ -105,19 +116,6 @@ abstract class Vec4 extends _Expression with Numerical {
 
   vm.Vector4 evaluate() => vm.Vector4.array(_evaluate());
 }
-
-/// Node within an SSIR abstract syntax tree.
-abstract class _Expression {
-  final spirv.Instruction _instruction;
-
-  _Expression(this._instruction) : assert(_instruction != null);
-
-  spirv.Type get _type;
-
-  List<double> _evaluate();
-}
-
-mixin Numerical on _Expression {}
 
 class _ConstScalar extends Scalar {
   final double value;
@@ -172,7 +170,7 @@ class _ConstVec4 extends Vec4 {
 }
 
 class _Scalar extends Scalar {
-  final Numerical child;
+  final Expression child;
 
   _Scalar(this.child)
       : assert(child != null),
@@ -183,7 +181,7 @@ class _Scalar extends Scalar {
 }
 
 class _Vec2 extends Vec2 {
-  final Numerical child;
+  final Expression child;
 
   _Vec2(this.child)
       : assert(child != null),
@@ -194,7 +192,7 @@ class _Vec2 extends Vec2 {
 }
 
 class _Vec3 extends Vec3 {
-  final Numerical child;
+  final Expression child;
 
   _Vec3(this.child)
       : assert(child != null),
@@ -205,7 +203,7 @@ class _Vec3 extends Vec3 {
 }
 
 class _Vec4 extends Vec4 {
-  final Numerical child;
+  final Expression child;
 
   _Vec4(this.child)
       : assert(child != null),
@@ -215,8 +213,8 @@ class _Vec4 extends Vec4 {
   List<double> _evaluate() => child._evaluate();
 }
 
-class _Composite extends _Expression with Numerical {
-  final List<Numerical> children;
+class _Composite extends Expression {
+  final List<Expression> children;
   final spirv.Type _type;
   final int elementCount;
 
@@ -224,7 +222,7 @@ class _Composite extends _Expression with Numerical {
       : assert(_type != null),
         assert(children != null),
         elementCount = children.length,
-        super(spirv.OpCompositeConstruct(
+        super._(spirv.OpCompositeConstruct(
           children.map((child) => child._instruction).toList(),
         ));
 
@@ -234,28 +232,28 @@ class _Composite extends _Expression with Numerical {
       });
 }
 
-class _Negate extends _Expression with Numerical {
-  final Numerical a;
+class _Negate extends Expression {
+  final Expression a;
 
   _Negate(this.a)
       : assert(a != null),
-        super(spirv.OpFNegate(a._instruction));
+        super._(spirv.OpFNegate(a._instruction));
 
   spirv.Type get _type => a._type;
 
   List<double> _evaluate() => a._evaluate().map((v) => -v).toList();
 }
 
-abstract class _BinOp extends _Expression with Numerical {
-  final Numerical a;
-  final Numerical b;
+abstract class _BinOp extends Expression {
+  final Expression a;
+  final Expression b;
 
   _BinOp(this.a, this.b, spirv.Instruction instruction)
       : assert(a != null),
         assert(b != null),
         assert(a._type == b._type),
         assert(instruction != null),
-        super(instruction);
+        super._(instruction);
 
   double _op(double a, double b);
 
@@ -273,28 +271,28 @@ abstract class _BinOp extends _Expression with Numerical {
 }
 
 class _Add extends _BinOp {
-  _Add(_Expression a, _Expression b)
+  _Add(Expression a, Expression b)
       : super(a, b, spirv.OpFAdd(a._instruction, b._instruction));
 
   double _op(double a, double b) => a + b;
 }
 
 class _Subtract extends _BinOp {
-  _Subtract(_Expression a, _Expression b)
+  _Subtract(Expression a, Expression b)
       : super(a, b, spirv.OpFSub(a._instruction, b._instruction));
 
   double _op(double a, double b) => a - b;
 }
 
 class _Multiply extends _BinOp {
-  _Multiply(_Expression a, _Expression b)
+  _Multiply(Expression a, Expression b)
       : super(a, b, spirv.OpFMul(a._instruction, b._instruction));
 
   double _op(double a, double b) => a * b;
 }
 
 class _Divide extends _BinOp {
-  _Divide(_Expression a, _Expression b)
+  _Divide(Expression a, Expression b)
       : super(a, b, spirv.OpFDiv(a._instruction, b._instruction));
 
   double _op(double a, double b) {
@@ -306,15 +304,15 @@ class _Divide extends _BinOp {
 }
 
 class _Mod extends _BinOp {
-  _Mod(_Expression a, _Expression b)
+  _Mod(Expression a, Expression b)
       : super(a, b, spirv.OpFMod(a._instruction, b._instruction));
 
   double _op(double a, double b) => a % b;
 }
 
 class _Dot extends Scalar {
-  final _Expression a;
-  final _Expression b;
+  final Expression a;
+  final Expression b;
 
   _Dot(this.a, this.b)
       : assert(a._type != spirv.floatT),
@@ -332,13 +330,13 @@ class _Dot extends Scalar {
   }
 }
 
-class _Scale extends _Expression with Numerical {
-  final _Expression a;
+class _Scale extends Expression {
+  final Expression a;
   final Scalar b;
 
   _Scale(this.a, this.b)
       : assert(a._type != spirv.floatT),
-        super(spirv.OpVectorTimesScalar(a._instruction, b._instruction));
+        super._(spirv.OpVectorTimesScalar(a._instruction, b._instruction));
 
   spirv.Type get _type => a._type;
 

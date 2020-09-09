@@ -19,6 +19,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleCapability(const spv_parsed_instruction_t* inst);
   spv_result_t HandleExtInstImport(const spv_parsed_instruction_t* inst);
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -28,12 +29,22 @@ class InterpreterImpl : public Interpreter {
   size_t word_count_;
 
   std::string last_error_msg_ = "";
+
+  uint32_t main_function_id_ = 0;
 };
 
 namespace {
 
-uint32_t get_operand(const spv_parsed_instruction_t* parsed_instruction, int operand_index) {
-  return parsed_instruction->words[parsed_instruction->operands[operand_index].offset];
+uint32_t get_operand(const spv_parsed_instruction_t* parsed_instruction,
+    int operand_index) {
+  return parsed_instruction->words[
+    parsed_instruction->operands[operand_index].offset];
+}
+
+const char* get_literal(const spv_parsed_instruction_t* parsed_instruction,
+    int operand_index) {
+  return reinterpret_cast<const char*>(&parsed_instruction->words[
+    parsed_instruction->operands[operand_index].offset]);
 }
 
 spv_result_t parse_header(void* user_data, spv_endianness_t endian, uint32_t magic, uint32_t version,
@@ -145,7 +156,7 @@ spv_result_t InterpreterImpl::HandleExtInstImport(
 spv_result_t InterpreterImpl::HandleMemoryModel(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kAddressingModelIndex = 0;
-  static constexpr int kMemoryModelIndex = 0;
+  static constexpr int kMemoryModelIndex = 1;
 
   uint32_t addressing_model = get_operand(inst, kAddressingModelIndex);
   if (addressing_model != spv::AddressingModelLogical) {
@@ -160,5 +171,36 @@ spv_result_t InterpreterImpl::HandleMemoryModel(
   }
   return SPV_SUCCESS;
 }
+
+spv_result_t InterpreterImpl::HandleDecorate(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kTargetIndex = 0;
+  static constexpr int kDecorationIndex = 1;
+  static constexpr int kLinkageName = 2;
+  static constexpr int kLinkageType = 3;
+  static constexpr char kMainExportName[] = "main";
+
+  if (get_operand(inst, kDecorationIndex) != spv::DecorationLinkageAttributes) {
+    last_error_msg_ = "OpDecorate: Only LinkageAttributes are supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (get_operand(inst, kLinkageType) != spv::LinkageTypeExport) {
+    last_error_msg_ = "OpDecorate: Only exporting is available "
+        "using LinkageAttributes.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (!strcmp(get_literal(inst, kLinkageName), kMainExportName) ||
+      main_function_id_ != 0) {
+    last_error_msg_ = "OpDecorate: There can only be a single exported "
+        "function named 'main'.";
+    return SPV_UNSUPPORTED;
+  }
+
+  main_function_id_ = get_operand(inst, kTargetIndex);
+  return SPV_SUCCESS;
+}
+
 
 }  // namespace ssir

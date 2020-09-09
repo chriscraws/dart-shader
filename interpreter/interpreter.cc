@@ -20,6 +20,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleExtInstImport(const spv_parsed_instruction_t* inst);
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -30,7 +31,7 @@ class InterpreterImpl : public Interpreter {
 
   std::string last_error_msg_ = "";
 
-  uint32_t main_function_id_ = 0;
+  uint32_t main_function_, float_type_, vec2_type_, vec3_type_, vec4_type_ = 0;
 };
 
 namespace {
@@ -61,6 +62,8 @@ spv_result_t parse_instruction(void* user_data, const spv_parsed_instruction_t* 
       return interpreter->HandleExtInstImport(parsed_instruction);
     case spv::OpMemoryModel:
       return interpreter->HandleMemoryModel(parsed_instruction);
+    case spv::OpTypeFloat:
+
     default:
       return SPV_UNSUPPORTED;
   }
@@ -192,15 +195,32 @@ spv_result_t InterpreterImpl::HandleDecorate(
   }
 
   if (!strcmp(get_literal(inst, kLinkageName), kMainExportName) ||
-      main_function_id_ != 0) {
+      main_function_ != 0) {
     last_error_msg_ = "OpDecorate: There can only be a single exported "
         "function named 'main'.";
     return SPV_UNSUPPORTED;
   }
 
-  main_function_id_ = get_operand(inst, kTargetIndex);
+  main_function_ = get_operand(inst, kTargetIndex);
   return SPV_SUCCESS;
 }
 
+spv_result_t InterpreterImpl::HandleTypeFloat(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kWidthIndex = 0;
+  static constexpr uint32_t kRequiredFloatWidth = 32;
+  uint32_t width = get_operand(inst, kWidthIndex);
+  if (width != kRequiredFloatWidth) {
+    last_error_msg_ = "OpTypeFloat: Only 32-bit width is supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (float_type_ != 0) {
+    last_error_msg_ = "OpTypeFloat: Only one OpTypeFloat should be specified.";
+    return SPV_UNSUPPORTED;
+  }
+
+  float_type_ = inst->result_id;
+}
 
 }  // namespace ssir

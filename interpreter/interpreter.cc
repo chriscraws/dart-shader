@@ -30,6 +30,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleConstant(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleConstantComposite(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
@@ -100,6 +101,9 @@ spv_result_t parse_instruction(
       break;
     case spv::OpConstant:
       result = interpreter->HandleConstant(parsed_instruction);
+      break;
+    case spv::OpConstantComposite:
+      result = interpreter->HandleConstantComposite(parsed_instruction);
       break;
     case spv::OpFunction:
       result = interpreter->HandleFunction(parsed_instruction);
@@ -358,6 +362,46 @@ spv_result_t InterpreterImpl::HandleConstant(
   float value = *reinterpret_cast<const float*>(get_literal(inst, kValueIndex));
   expressions_.emplace(inst->result_id,
                        Expression(kFloat, std::to_string(value)));
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleConstantComposite(
+    const spv_parsed_instruction_t* inst) {
+  ExpressionType type = ResolveType(inst->type_id);
+  int opcount = inst->num_operands;
+  int expected_opcount = 0;
+  std::string format;
+
+  switch (type) {
+    case kVec2:
+      expected_opcount = 2;
+      format = "vec2($0, $1)";
+      break;
+    case kVec3:
+      expected_opcount = 3;
+      format = "vec3($0, $1, $2)";
+      break;
+    case kVec4:
+      expected_opcount = 4;
+      format = "vec4($0, $1, $2, $3)";
+      break;
+    default:
+      last_error_msg_ = "OpConstantComposite: Invalid composite type";
+      return SPV_UNSUPPORTED;
+  }
+
+  if (opcount != expected_opcount) {
+    last_error_msg_ = "OpConstantComposite: Wrong number of operands for type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+
+  std::vector<uint32_t> deps(opcount);
+  for (int i = 0; i < opcount; i++) {
+    deps[i] = get_operand(inst, i);
+  }
+
+  expressions_.emplace(inst->result_id, Expression(type, format, deps));
+
   return SPV_SUCCESS;
 }
 

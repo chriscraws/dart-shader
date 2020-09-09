@@ -3,6 +3,8 @@ cc_library(
   name = "interpreter",
   hdrs = ["interpreter.h"],
   srcs = [
+    "expression.h",
+    "expression.cc",
     "interpreter.cc",
   ],
   deps = [

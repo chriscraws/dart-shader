@@ -22,6 +22,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleTypeFunction(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -67,6 +68,8 @@ spv_result_t parse_instruction(void* user_data, const spv_parsed_instruction_t* 
       return interpreter->HandleTypeFloat(parsed_instruction);
     case spv::OpTypeVector:
       return interpreter->HandleTypeVector(parsed_instruction);
+    case spv::OpTypeFunction:
+      return interpreter->HandleTypeFunction(parsed_instruction);
     default:
       return SPV_UNSUPPORTED;
   }
@@ -255,6 +258,33 @@ spv_result_t InterpreterImpl::HandleTypeVector(
       return SPV_UNSUPPORTED;
   }
 
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleTypeFunction(
+    const spv_parsed_instruction_t* inst) {
+  if (main_function_ != 0) {
+    last_error_msg_ = "OpTypeFunction: Only a single function type is supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (inst->num_operands > 1) {
+    last_error_msg_ = "OpTypeFunction: Only one parameter is supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  uint32_t param_type_id = get_operand(inst, 0);
+  if (param_type_id == 0 || param_type_id != vec2_type_) {
+    last_error_msg_ = "OpTypeFunction: Parameter type was not defined or was not vec2.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (inst->type_id == 0 || inst->type_id != vec4_type_) {
+    last_error_msg_ = "OpTypeFunction: Return type was not defined or was not vec4.";
+    return SPV_UNSUPPORTED;
+  }
+  
+  main_function_ = inst->result_id;
   return SPV_SUCCESS;
 }
 

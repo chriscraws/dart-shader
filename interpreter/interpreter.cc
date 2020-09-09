@@ -21,6 +21,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -63,7 +64,9 @@ spv_result_t parse_instruction(void* user_data, const spv_parsed_instruction_t* 
     case spv::OpMemoryModel:
       return interpreter->HandleMemoryModel(parsed_instruction);
     case spv::OpTypeFloat:
-
+      return interpreter->HandleTypeFloat(parsed_instruction);
+    case spv::OpTypeVector:
+      return interpreter->HandleTypeVector(parsed_instruction);
     default:
       return SPV_UNSUPPORTED;
   }
@@ -221,6 +224,38 @@ spv_result_t InterpreterImpl::HandleTypeFloat(
   }
 
   float_type_ = inst->result_id;
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleTypeVector(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kComponentTypeIndex = 0;
+  static constexpr int kComponentCountIndex = 0;
+  uint32_t type = get_operand(inst, kComponentTypeIndex);
+  if (type == 0 || type != float_type_) {
+    last_error_msg_ = "OpTypeVector: OpTypeFloat was not declared, "
+        "or didn't match the given component type.";
+    return SPV_ERROR_INVALID_VALUE;
+  }
+
+  uint32_t count = get_operand(inst, kComponentCountIndex);
+
+  switch (count) {
+    case 2:
+      vec2_type_ = inst->result_id;
+      break;
+    case 3:
+      vec3_type_ = inst->result_id;
+      break;
+    case 4:
+      vec4_type_ = inst->result_id;
+      break;
+    default:
+      last_error_msg_ = "OpTypeVector: Component count must be 2, 3, or 4.";
+      return SPV_UNSUPPORTED;
+  }
+
+  return SPV_SUCCESS;
 }
 
 }  // namespace ssir

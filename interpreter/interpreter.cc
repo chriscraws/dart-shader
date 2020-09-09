@@ -1,7 +1,8 @@
 #include "interpreter/interpreter.h"
 
-#include <string>
 #include <cstring>
+#include <sstream>
+#include <string>
 
 #include "external/spirv_tools/include/spirv-tools/libspirv.h"
 #include "external/spirv_headers/include/spirv/unified1/spirv.hpp"
@@ -16,6 +17,8 @@ class InterpreterImpl : public Interpreter {
   virtual Result Interpret(const char* data, size_t length) override;
   virtual std::string WriteSKSL() override;
 
+  void set_last_op(uint32_t op);
+
   spv_result_t HandleCapability(const spv_parsed_instruction_t* inst);
   spv_result_t HandleExtInstImport(const spv_parsed_instruction_t* inst);
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
@@ -23,6 +26,9 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFunction(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleFunction(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -33,10 +39,18 @@ class InterpreterImpl : public Interpreter {
 
   std::string last_error_msg_ = "";
 
-  uint32_t main_function_, float_type_, vec2_type_, vec3_type_, vec4_type_ = 0;
+  // Result-IDs of important instructions.
+  uint32_t main_function_type_, float_type_, vec2_type_, vec3_type_, vec4_type_,
+      main_function_, frag_position_param_ = 0;
+  
+  uint32_t last_op_ = 0;
+  
+  std::stringstream sksl_;
 };
 
 namespace {
+
+constexpr char kFragColorParamName[] = "fragPos";
 
 uint32_t get_operand(const spv_parsed_instruction_t* parsed_instruction,
     int operand_index) {
@@ -57,22 +71,42 @@ spv_result_t parse_header(void* user_data, spv_endianness_t endian, uint32_t mag
 
 spv_result_t parse_instruction(void* user_data, const spv_parsed_instruction_t* parsed_instruction) {
   auto* interpreter = static_cast<InterpreterImpl*>(user_data);
+  spv_result_t result = SPV_UNSUPPORTED;
+
   switch (parsed_instruction->opcode) {
     case spv::OpCapability:
-      return interpreter->HandleCapability(parsed_instruction);
+      result = interpreter->HandleCapability(parsed_instruction);
+      break;
     case spv::OpExtInstImport:
-      return interpreter->HandleExtInstImport(parsed_instruction);
+      result = interpreter->HandleExtInstImport(parsed_instruction);
+      break;
     case spv::OpMemoryModel:
-      return interpreter->HandleMemoryModel(parsed_instruction);
+      result = interpreter->HandleMemoryModel(parsed_instruction);
+      break;
     case spv::OpTypeFloat:
-      return interpreter->HandleTypeFloat(parsed_instruction);
+      result = interpreter->HandleTypeFloat(parsed_instruction);
+      break;
     case spv::OpTypeVector:
-      return interpreter->HandleTypeVector(parsed_instruction);
+      result = interpreter->HandleTypeVector(parsed_instruction);
+      break;
     case spv::OpTypeFunction:
-      return interpreter->HandleTypeFunction(parsed_instruction);
+      result = interpreter->HandleTypeFunction(parsed_instruction);
+      break;
+    case spv::OpFunction:
+      result = interpreter->HandleFunction(parsed_instruction);
+      break;
+    case spv::OpFunctionParameter:
+      result = interpreter->HandleFunctionParameter(parsed_instruction);
+      break;
+    case spv::OpLabel:
+      result = interpreter->HandleLabel(parsed_instruction);
+      break;
     default:
       return SPV_UNSUPPORTED;
   }
+
+  interpreter->set_last_op(parsed_instruction->opcode);
+  return result;
 }
 
 }  // namespace
@@ -104,6 +138,9 @@ Result InterpreterImpl::Interpret(const char* data, size_t length) {
   words_ = reinterpret_cast<const uint32_t*>(data);
   word_count_ = length / 4;
 
+  // Write SkSL header
+  sksl_ << "half4 main(half2 " << kFragColorParamName << ") {\n  ";
+
   spv_result_t result = spvBinaryParse(
     spv_context_,
     this,  // user_data
@@ -115,6 +152,7 @@ Result InterpreterImpl::Interpret(const char* data, size_t length) {
   );
 
   if (result != SPV_SUCCESS) {
+    sksl_.str("");
     return {
       .status = kFailure,
       .message = last_error_msg_.empty() ?
@@ -128,6 +166,10 @@ Result InterpreterImpl::Interpret(const char* data, size_t length) {
 
 std::string InterpreterImpl::WriteSKSL() {
   return "";
+}
+
+void InterpreterImpl::set_last_op(uint32_t op) {
+  last_op_ = op;
 }
 
 spv_result_t InterpreterImpl::HandleCapability(
@@ -201,7 +243,7 @@ spv_result_t InterpreterImpl::HandleDecorate(
   }
 
   if (!strcmp(get_literal(inst, kLinkageName), kMainExportName) ||
-      main_function_ != 0) {
+      main_function_type_ != 0) {
     last_error_msg_ = "OpDecorate: There can only be a single exported "
         "function named 'main'.";
     return SPV_UNSUPPORTED;
@@ -263,7 +305,7 @@ spv_result_t InterpreterImpl::HandleTypeVector(
 
 spv_result_t InterpreterImpl::HandleTypeFunction(
     const spv_parsed_instruction_t* inst) {
-  if (main_function_ != 0) {
+  if (main_function_type_ != 0) {
     last_error_msg_ = "OpTypeFunction: Only a single function type is supported.";
     return SPV_UNSUPPORTED;
   }
@@ -284,7 +326,63 @@ spv_result_t InterpreterImpl::HandleTypeFunction(
     return SPV_UNSUPPORTED;
   }
   
-  main_function_ = inst->result_id;
+  main_function_type_ = inst->result_id;
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleFunction(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kFunctionControlIndex = 0;
+  static constexpr int kFunctionTypeIndex = 0;
+
+  if (inst->result_id == 0 || inst->result_id != main_function_) {
+    last_error_msg_ = "OpFunction: There must be one function exported as 'main'";
+    return SPV_UNSUPPORTED;
+  }
+
+  uint32_t function_control = get_operand(inst, kFunctionControlIndex);
+  if (function_control != spv::FunctionControlMaskNone) {
+    last_error_msg_ = "OpFunction: No function control flags are supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  uint32_t function_type = get_operand(inst, kFunctionTypeIndex);
+  if (function_type == 0 || function_type != main_function_type_) {
+    last_error_msg_ = "OpFunction: Function type mismatch.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (inst->type_id != vec4_type_) {
+    last_error_msg_ = "OpFunction: Function must return vec4 type.";
+    return SPV_UNSUPPORTED;
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleFunctionParameter(
+    const spv_parsed_instruction_t* inst) {
+  if (frag_position_param_ != 0) {
+    last_error_msg_ = "OpFunctionParam: There can only be one specified parameter.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (inst->type_id != vec2_type_) {
+    last_error_msg_ = "OpFunctionParam: Param must be type vec2.";
+    return SPV_UNSUPPORTED;
+  }
+
+  frag_position_param_ = inst->result_id;
+  return SPV_SUCCESS;
+}
+
+spv_result_t InterpreterImpl::HandleLabel(
+    const spv_parsed_instruction_t* inst) {
+  if (last_op_ != spv::OpFunctionParameter) {
+    last_error_msg_ = "OpLabel: The last instruction should have been OpFunctionParameter.";
+    return SPV_UNSUPPORTED;
+  }
+
   return SPV_SUCCESS;
 }
 

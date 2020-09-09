@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SSIR_INTERPRETER_INTERPRETER_H_
-#define SSIR_INTERPRETER_INTERPRETER_H_
+#ifndef SSIR_TRANSPILER_TRANSPILER_H_
+#define SSIR_TRANSPILER_TRANSPILER_H_
 
 #include <memory>
 #include <string>
 
 namespace ssir {
 
-// Error codes for interpreting.
+// Error codes for transpiling.
 enum Status {
   kSuccess = 0,
   kFailedToInitialize = 1,
@@ -24,21 +24,21 @@ struct Result {
   std::string message;
 };
 
-// Stub interpreter class.
-class Interpreter {
+// Transpiler for SSIR to SkSL.
+class Transpiler {
  public:
-  static std::unique_ptr<Interpreter> create();
+  static std::unique_ptr<Transpiler> create();
 
-  virtual ~Interpreter() = default;
+  virtual ~Transpiler() = default;
 
-  virtual Result Interpret(const char* data, size_t length) = 0;
+  virtual Result Transpile(const char* data, size_t length) = 0;
 
-  virtual std::string WriteSKSL() = 0;
+  virtual std::string GetSkSL() = 0;
 
  protected:
-  Interpreter() = default;
+  Transpiler() = default;
 };
 
 }  // namespace ssir
 
-#endif  // SSIR_INTERPRETER_INTERPRETER_H_
+#endif  // SSIR_TRANSPILER_TRANSPILER_H_

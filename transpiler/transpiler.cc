@@ -1,4 +1,4 @@
-#include "interpreter/interpreter.h"
+#include "transpiler/transpiler.h"
 
 #include <cstring>
 #include <sstream>
@@ -6,21 +6,20 @@
 
 #include "external/spirv_headers/include/spirv/unified1/spirv.hpp"
 #include "external/spirv_tools/include/spirv-tools/libspirv.h"
-#include "interpreter/expression.h"
 
 namespace ssir {
 
-class InterpreterImpl : public Interpreter {
+class TranspilerImpl : public Transpiler {
  public:
-  InterpreterImpl();
-  virtual ~InterpreterImpl();
+  TranspilerImpl();
+  virtual ~TranspilerImpl();
 
-  virtual Result Interpret(const char* data, size_t length) override;
-  virtual std::string WriteSKSL() override;
+  virtual Result Transpile(const char* data, size_t length) override;
+  virtual std::string GetSkSL() override;
 
   void set_last_op(uint32_t op);
 
-  ExpressionType ResolveType(uint32_t);
+  std::string ResolveName(uint32_t id);
 
   spv_result_t HandleCapability(const spv_parsed_instruction_t* inst);
   spv_result_t HandleExtInstImport(const spv_parsed_instruction_t* inst);
@@ -34,6 +33,7 @@ class InterpreterImpl : public Interpreter {
   spv_result_t HandleFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleReturnValue(const spv_parsed_instruction_t* inst);
 
  private:
   const spv_context spv_context_;
@@ -46,15 +46,12 @@ class InterpreterImpl : public Interpreter {
 
   // Result-IDs of important instructions.
   uint32_t main_function_type_, float_type_, vec2_type_, vec3_type_, vec4_type_,
-      main_function_, frag_position_param_ = 0;
+      main_function_, frag_position_param_, return_ = 0;
   uint32_t last_op_ = 0;
   std::stringstream sksl_;
-  std::unordered_map<uint32_t, Expression> expressions_;
 };
 
 namespace {
-
-constexpr char kFragColorParamName[] = "fragPos";
 
 uint32_t get_operand(const spv_parsed_instruction_t* parsed_instruction,
                      int operand_index) {
@@ -77,7 +74,7 @@ spv_result_t parse_header(void* user_data, spv_endianness_t endian,
 
 spv_result_t parse_instruction(
     void* user_data, const spv_parsed_instruction_t* parsed_instruction) {
-  auto* interpreter = static_cast<InterpreterImpl*>(user_data);
+  auto* interpreter = static_cast<TranspilerImpl*>(user_data);
   spv_result_t result = SPV_UNSUPPORTED;
 
   switch (parsed_instruction->opcode) {
@@ -114,6 +111,9 @@ spv_result_t parse_instruction(
     case spv::OpLabel:
       result = interpreter->HandleLabel(parsed_instruction);
       break;
+    case spv::OpReturnValue:
+      result = interpreter->HandleReturnValue(parsed_instruction);
+      break;
     default:
       return SPV_UNSUPPORTED;
   }
@@ -124,16 +124,16 @@ spv_result_t parse_instruction(
 
 }  // namespace
 
-InterpreterImpl::InterpreterImpl()
+TranspilerImpl::TranspilerImpl()
     : spv_context_(spvContextCreate(SPV_ENV_UNIVERSAL_1_2)) {}
 
-InterpreterImpl::~InterpreterImpl() {
+TranspilerImpl::~TranspilerImpl() {
   if (spv_context_ != NULL) {
     spvContextDestroy(spv_context_);
   }
 }
 
-Result InterpreterImpl::Interpret(const char* data, size_t length) {
+Result TranspilerImpl::Transpile(const char* data, size_t length) {
   if (spv_context_ == NULL) {
     return {.status = kFailedToInitialize,
             .message = "Failed to create SPIR-V Tools context."};
@@ -147,9 +147,6 @@ Result InterpreterImpl::Interpret(const char* data, size_t length) {
 
   words_ = reinterpret_cast<const uint32_t*>(data);
   word_count_ = length / 4;
-
-  // Write SkSL header
-  sksl_ << "half4 main(half2 " << kFragColorParamName << ") {\n  ";
 
   spv_result_t result = spvBinaryParse(spv_context_,
                                        this,  // user_data
@@ -167,24 +164,15 @@ Result InterpreterImpl::Interpret(const char* data, size_t length) {
   return {.status = kSuccess};
 }
 
-std::string InterpreterImpl::WriteSKSL() { return ""; }
+std::string TranspilerImpl::GetSkSL() { return ""; }
 
-void InterpreterImpl::set_last_op(uint32_t op) { last_op_ = op; }
+void TranspilerImpl::set_last_op(uint32_t op) { last_op_ = op; }
 
-ExpressionType InterpreterImpl::ResolveType(uint32_t id) {
-  if (id == float_type_) {
-    return kFloat;
-  } else if (id == vec2_type_) {
-    return kVec2;
-  } else if (id == vec3_type_) {
-    return kVec3;
-  } else if (id == vec4_type_) {
-    return kVec4;
-  }
-  return kNone;
+std::string TranspilerImpl::ResolveName(uint32_t id) {
+  return "i" + std::to_string(id);
 }
 
-spv_result_t InterpreterImpl::HandleCapability(
+spv_result_t TranspilerImpl::HandleCapability(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kCapabilityIndex = 0;
   uint32_t capability = get_operand(inst, kCapabilityIndex);
@@ -200,7 +188,7 @@ spv_result_t InterpreterImpl::HandleCapability(
   }
 }
 
-spv_result_t InterpreterImpl::HandleExtInstImport(
+spv_result_t TranspilerImpl::HandleExtInstImport(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kNameIndex = 0;
   static constexpr char kGLSLImportName[] = "GLSL.std.450";
@@ -216,7 +204,7 @@ spv_result_t InterpreterImpl::HandleExtInstImport(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleMemoryModel(
+spv_result_t TranspilerImpl::HandleMemoryModel(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kAddressingModelIndex = 0;
   static constexpr int kMemoryModelIndex = 1;
@@ -237,7 +225,7 @@ spv_result_t InterpreterImpl::HandleMemoryModel(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleDecorate(
+spv_result_t TranspilerImpl::HandleDecorate(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kTargetIndex = 0;
   static constexpr int kDecorationIndex = 1;
@@ -269,7 +257,7 @@ spv_result_t InterpreterImpl::HandleDecorate(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleTypeFloat(
+spv_result_t TranspilerImpl::HandleTypeFloat(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kWidthIndex = 0;
   static constexpr uint32_t kRequiredFloatWidth = 32;
@@ -288,7 +276,7 @@ spv_result_t InterpreterImpl::HandleTypeFloat(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleTypeVector(
+spv_result_t TranspilerImpl::HandleTypeVector(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kComponentTypeIndex = 0;
   static constexpr int kComponentCountIndex = 0;
@@ -320,7 +308,7 @@ spv_result_t InterpreterImpl::HandleTypeVector(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleTypeFunction(
+spv_result_t TranspilerImpl::HandleTypeFunction(
     const spv_parsed_instruction_t* inst) {
   if (main_function_type_ != 0) {
     last_error_msg_ =
@@ -350,7 +338,7 @@ spv_result_t InterpreterImpl::HandleTypeFunction(
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleConstant(
+spv_result_t TranspilerImpl::HandleConstant(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kValueIndex = 0;
 
@@ -360,52 +348,33 @@ spv_result_t InterpreterImpl::HandleConstant(
   }
 
   float value = *reinterpret_cast<const float*>(get_literal(inst, kValueIndex));
-  expressions_.emplace(inst->result_id,
-                       Expression(kFloat, std::to_string(value)));
+
+  sksl_ << "  const float " << ResolveName(inst->result_id) << " = " << value
+        << ";\n";
+
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleConstantComposite(
+spv_result_t TranspilerImpl::HandleConstantComposite(
     const spv_parsed_instruction_t* inst) {
-  ExpressionType type = ResolveType(inst->type_id);
   int opcount = inst->num_operands;
-  int expected_opcount = 0;
-  std::string format;
 
-  switch (type) {
-    case kVec2:
-      expected_opcount = 2;
-      format = "vec2($0, $1)";
-      break;
-    case kVec3:
-      expected_opcount = 3;
-      format = "vec3($0, $1, $2)";
-      break;
-    case kVec4:
-      expected_opcount = 4;
-      format = "vec4($0, $1, $2, $3)";
-      break;
-    default:
-      last_error_msg_ = "OpConstantComposite: Invalid composite type";
-      return SPV_UNSUPPORTED;
-  }
+  sksl_ << "  const vec" << opcount << ResolveName(inst->result_id) << " = vec"
+        << opcount << "(";
 
-  if (opcount != expected_opcount) {
-    last_error_msg_ = "OpConstantComposite: Wrong number of operands for type.";
-    return SPV_ERROR_INVALID_BINARY;
-  }
-
-  std::vector<uint32_t> deps(opcount);
   for (int i = 0; i < opcount; i++) {
-    deps[i] = get_operand(inst, i);
+    sksl_ << ResolveName(get_operand(inst, i));
+    if (i < opcount - 1) {
+      sksl_ << ", ";
+    }
   }
 
-  expressions_.emplace(inst->result_id, Expression(type, format, deps));
+  sksl_ << ");\n";
 
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleFunction(
+spv_result_t TranspilerImpl::HandleFunction(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kFunctionControlIndex = 0;
   static constexpr int kFunctionTypeIndex = 0;
@@ -433,10 +402,12 @@ spv_result_t InterpreterImpl::HandleFunction(
     return SPV_UNSUPPORTED;
   }
 
+  sksl_ << "half4 main(";
+
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleFunctionParameter(
+spv_result_t TranspilerImpl::HandleFunctionParameter(
     const spv_parsed_instruction_t* inst) {
   if (frag_position_param_ != 0) {
     last_error_msg_ =
@@ -450,17 +421,33 @@ spv_result_t InterpreterImpl::HandleFunctionParameter(
   }
 
   frag_position_param_ = inst->result_id;
+
+  sksl_ << "half2 " << ResolveName(frag_position_param_);
+
   return SPV_SUCCESS;
 }
 
-spv_result_t InterpreterImpl::HandleLabel(
-    const spv_parsed_instruction_t* inst) {
+spv_result_t TranspilerImpl::HandleLabel(const spv_parsed_instruction_t* inst) {
   if (last_op_ != spv::OpFunctionParameter) {
     last_error_msg_ =
         "OpLabel: The last instruction should have been OpFunctionParameter.";
     return SPV_UNSUPPORTED;
   }
 
+  sksl_ << ") {\n";
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleReturnValue(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kReturnIdIndex = 0;
+  if (return_ != 0) {
+    last_error_msg_ = "OpReturnValue: There can only be one return value.";
+    return SPV_UNSUPPORTED;
+  }
+  return_ = get_operand(inst, kReturnIdIndex);
+  sksl_ << "  return half4(" << ResolveName(return_) << ");\n";
   return SPV_SUCCESS;
 }
 

@@ -1,11 +1,9 @@
 
 cc_library(
-  name = "interpreter",
-  hdrs = ["interpreter.h"],
+  name = "transpiler",
+  hdrs = ["transpiler.h"],
   srcs = [
-    "expression.h",
-    "expression.cc",
-    "interpreter.cc",
+    "transpiler.cc",
   ],
   deps = [
     "@spirv_tools//:spirv_tools",

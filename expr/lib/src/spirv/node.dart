@@ -55,6 +55,42 @@ class Node {
         evaluate = (() => [x, y, z, w]),
         type = vec4T;
 
+  Node.scalarUniform(double Function() getter)
+      : assert(getter != null),
+        instruction = OpVariable.scalarUniform().load(),
+        evaluate = (() => [getter()]),
+        type = floatT;
+
+  Node.vec2Uniform(vm.Vector2 Function() getter)
+      : assert(getter != null),
+        instruction = OpVariable.vec2Uniform().load(),
+        evaluate = (() {
+          final out = List<double>(2);
+          getter().copyInto(out);
+          return out;
+        }),
+        type = vec2T;
+
+  Node.vec3Uniform(vm.Vector3 Function() getter)
+      : assert(getter != null),
+        instruction = OpVariable.vec3Uniform().load(),
+        evaluate = (() {
+          final out = List<double>(3);
+          getter().copyInto(out);
+          return out;
+        }),
+        type = vec3T;
+
+  Node.vec4Uniform(vm.Vector4 Function() getter)
+      : assert(getter != null),
+        instruction = OpVariable.vec4Uniform().load(),
+        evaluate = (() {
+          final out = List<double>(4);
+          getter().copyInto(out);
+          return out;
+        }),
+        type = vec4T;
+
   Node._composite(
     List<Node> children,
     Type type,

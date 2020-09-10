@@ -6,10 +6,17 @@ import 'dart:typed_data';
 
 import 'instruction.dart';
 
+final _storageClassUniform = 2;
+
 const floatT = OpTypeFloat._(32);
 const vec2T = OpTypeVec._(floatT, 2);
 const vec3T = OpTypeVec._(floatT, 3);
 const vec4T = OpTypeVec._(floatT, 4);
+
+const uniformFloatT = OpTypePointer._(floatT);
+const uniformVec2T = OpTypePointer._(vec2T);
+const uniformVec3T = OpTypePointer._(vec3T);
+const uniformVec4T = OpTypePointer._(vec4T);
 
 List<int> _toWords(String string) => [
       ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
@@ -130,6 +137,24 @@ class OpTypeVec extends Instruction with Type {
   List<Instruction> get deps => [componentType];
 }
 
+class OpTypePointer extends Instruction with Type {
+  final Type objectType;
+
+  const OpTypePointer._(this.objectType)
+      : assert(objectType != null),
+        super(
+          result: true,
+          opCode: 32,
+        );
+
+  List<int> operands(Identifier i) => [
+        _storageClassUniform,
+        i.identify(objectType),
+      ];
+
+  List<Instruction> get deps => [objectType];
+}
+
 class OpTypeFunction extends Instruction {
   final Type returnType;
   final List<Type> paramTypes;
@@ -247,6 +272,42 @@ class OpConstantComposite extends Instruction {
       constituants.map((op) => i.identify(op)).toList();
 
   List<Instruction> get deps => List<Instruction>.from(constituants);
+}
+
+class OpVariable extends Instruction {
+  OpVariable._(OpTypePointer type)
+      : assert(type != null),
+        super(
+          isDeclaration: true,
+          opCode: 59,
+          result: true,
+          type: type,
+        );
+
+  OpVariable.scalarUniform() : this._(uniformFloatT);
+  OpVariable.vec2Uniform() : this._(uniformVec2T);
+  OpVariable.vec3Uniform() : this._(uniformVec3T);
+  OpVariable.vec4Uniform() : this._(uniformVec4T);
+
+  OpLoad load() => OpLoad._(this);
+
+  List<int> operands(Identifier i) => [_storageClassUniform];
+  List<Instruction> get deps => [_storageClassUniform];
+}
+
+class OpLoad extends Instruction {
+  final OpVariable pointer;
+
+  OpLoad._(this.pointer)
+      : assert(pointer != null),
+        super(
+          opCode: 61,
+          result: true,
+          type: pointer.objectType,
+        );
+
+  List<int> operands(Identifier i) => [i.identify(pointer)];
+  List<Instruction> get deps => [pointer];
 }
 
 // Numerical operation with one arguments.

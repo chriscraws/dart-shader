@@ -78,9 +78,13 @@ class Module extends Identifier {
 
       // type delcarations
       floatT,
+      uniformFloatT,
       vec2T,
+      uniformVec2T,
       vec3T,
+      uniformVec3T,
       vec4T,
+      uniformVec4T,
       _mainType,
     ];
 

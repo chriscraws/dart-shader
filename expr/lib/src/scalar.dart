@@ -47,7 +47,6 @@ class Scalar extends Expression {
   Scalar abs() => Scalar._(Node.abs(this._node));
 
   /// Returns [1] for postive values and [-1] for negative values.
-  ///
   Scalar sign() => Scalar._(Node.sign(this._node));
 
   /// Strip decimals.

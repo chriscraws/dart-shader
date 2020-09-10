@@ -11,7 +11,7 @@ class Shader {
   /// Encode the shader as Flutter-compatible SPIR-V.
   ByteBuffer toSPIRV() {
     final module = Module();
-    module.color = color._node.instruction;
+    module.color = color._node;
     return module.encode();
   }
 }

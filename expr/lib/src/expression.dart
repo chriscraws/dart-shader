@@ -3,6 +3,6 @@ part of '../expr.dart';
 /// Abstract base class for mathematical expressions that can be
 /// evaluated at runtime and can be compiled to SPIR-V.
 abstract class Expression {
-  final Node _node;
+  final Evaluable _node;
   Expression._(this._node);
 }

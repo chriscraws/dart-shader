@@ -10,7 +10,9 @@ import 'dart:typed_data';
 import 'package:vector_math/vector_math.dart' as vm;
 
 import 'src/spirv/module.dart';
-import 'src/spirv/node.dart';
+import 'src/spirv/instruction.dart';
+import 'src/spirv/instructions.dart';
+import 'src/spirv/glsl.dart';
 
 part 'src/expression.dart';
 part 'src/scalar.dart';

@@ -13,6 +13,11 @@ mixin Type on Instruction {
   int get elementCount;
 }
 
+/// Instructions that can evaluate to a value.
+mixin Evaluable on Instruction {
+  List<double> evaluate();
+}
+
 /// Instructions are the next level of semantics in SPIR-V,
 /// they are essentially a grouping of words, that can be
 /// optionally assigned an identifier.
@@ -37,6 +42,10 @@ abstract class Instruction {
 
   // Null if not a constant, otherwise, the constant value.
   final double constant;
+
+  // Null if not a variable, otherwise the variable value.
+  // Must have length equal to [type.elementCount].
+  List<double> get variable => null;
 
   const Instruction({
     this.opCode,

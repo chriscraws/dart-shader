@@ -138,6 +138,7 @@ class OpTypeVec extends Instruction with Type {
 }
 
 class OpTypePointer extends Instruction with Type {
+  final int elementCount = -1;
   final Type objectType;
 
   const OpTypePointer._(this.objectType)
@@ -231,7 +232,7 @@ class OpReturnValue extends Instruction {
   List<Instruction> get deps => [value];
 }
 
-class OpConstant extends Instruction {
+class OpConstant extends Instruction with Evaluable {
   OpConstant(double value)
       : super(
           constant: value,
@@ -243,9 +244,11 @@ class OpConstant extends Instruction {
 
   List<int> operands(Identifier i) =>
       Float32List.fromList([constant]).buffer.asInt32List();
+
+  List<double> evaluate() => [constant];
 }
 
-class OpConstantComposite extends Instruction {
+class OpConstantComposite extends Instruction with Evaluable {
   final List<OpConstant> constituants;
 
   OpConstantComposite._(Type type, List<double> constituants)
@@ -272,11 +275,22 @@ class OpConstantComposite extends Instruction {
       constituants.map((op) => i.identify(op)).toList();
 
   List<Instruction> get deps => List<Instruction>.from(constituants);
+
+  List<double> evaluate() => constituants.fold([], (out, child) {
+        out.addAll(child.evaluate());
+        return out;
+      });
 }
 
 class OpVariable extends Instruction {
+  final Type objectType;
+
+  final List<double> variable;
+
   OpVariable._(OpTypePointer type)
       : assert(type != null),
+        objectType = type.objectType,
+        variable = List<double>(type.objectType.elementCount),
         super(
           isDeclaration: true,
           opCode: 59,
@@ -289,16 +303,15 @@ class OpVariable extends Instruction {
   OpVariable.vec3Uniform() : this._(uniformVec3T);
   OpVariable.vec4Uniform() : this._(uniformVec4T);
 
-  OpLoad load() => OpLoad._(this);
-
   List<int> operands(Identifier i) => [_storageClassUniform];
-  List<Instruction> get deps => [_storageClassUniform];
+
+  List<Instruction> get deps => [type];
 }
 
-class OpLoad extends Instruction {
+class OpLoad extends Instruction with Evaluable {
   final OpVariable pointer;
 
-  OpLoad._(this.pointer)
+  OpLoad(this.pointer)
       : assert(pointer != null),
         super(
           opCode: 61,
@@ -308,36 +321,37 @@ class OpLoad extends Instruction {
 
   List<int> operands(Identifier i) => [i.identify(pointer)];
   List<Instruction> get deps => [pointer];
+
+  List<double> evaluate() => pointer.variable.toList();
+
+  List<double> get variable => pointer.variable;
 }
 
 // Numerical operation with one arguments.
-class UniOp extends Instruction {
-  final Instruction a;
+class OpFNegate extends Instruction with Evaluable {
+  final Evaluable a;
 
-  UniOp(int opCode, this.a)
-      : assert(opCode != null),
-        assert(a != null),
+  OpFNegate(this.a)
+      : assert(a != null),
         super(
           type: a.type,
           result: true,
-          opCode: opCode,
+          opCode: 127,
         );
 
   List<int> operands(Identifier i) => [i.identify(a)];
 
   List<Instruction> get deps => [a];
-}
 
-class OpFNegate extends UniOp {
-  OpFNegate(Instruction a) : super(127, a);
+  List<double> evaluate() => a.evaluate().map((x) => -x).toList();
 }
 
 // Numerical operation with two arguments.
-class BinOp extends Instruction {
-  final Instruction a;
-  final Instruction b;
+abstract class _BinOp extends Instruction with Evaluable {
+  final Evaluable a;
+  final Evaluable b;
 
-  BinOp(int opCode, this.a, this.b)
+  _BinOp(int opCode, this.a, this.b)
       : assert(a.type == b.type),
         super(
           type: a.type,
@@ -348,31 +362,53 @@ class BinOp extends Instruction {
   List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
   List<Instruction> get deps => [a, b];
+
+  List<double> evaluate() {
+    final valueA = a.evaluate();
+    final valueB = b.evaluate();
+    final out = List<double>(valueA.length);
+    for (int i = 0; i < out.length; i++) {
+      out[i] = _op(valueA[i], valueB[i]);
+    }
+    return out;
+  }
+
+  double _op(double x, double y);
 }
 
-class OpFAdd extends BinOp {
+class OpFAdd extends _BinOp {
   OpFAdd(Instruction a, Instruction b) : super(129, a, b);
+
+  double _op(double x, double y) => x + y;
 }
 
-class OpFSub extends BinOp {
+class OpFSub extends _BinOp {
   OpFSub(Instruction a, Instruction b) : super(131, a, b);
+
+  double _op(double x, double y) => x - y;
 }
 
-class OpFMul extends BinOp {
+class OpFMul extends _BinOp {
   OpFMul(Instruction a, Instruction b) : super(133, a, b);
+
+  double _op(double x, double y) => x * y;
 }
 
-class OpFDiv extends BinOp {
+class OpFDiv extends _BinOp {
   OpFDiv(Instruction a, Instruction b) : super(136, a, b);
+
+  double _op(double x, double y) => x / y;
 }
 
-class OpFMod extends BinOp {
+class OpFMod extends _BinOp {
   OpFMod(Instruction a, Instruction b) : super(141, a, b);
+
+  double _op(double x, double y) => x % y;
 }
 
-class OpFDot extends Instruction {
-  final Instruction a;
-  final Instruction b;
+class OpFDot extends Instruction with Evaluable {
+  final Evaluable a;
+  final Evaluable b;
 
   OpFDot(this.a, this.b)
       : assert(a.type == b.type),
@@ -383,11 +419,13 @@ class OpFDot extends Instruction {
         );
 
   List<Instruction> get deps => [a, b];
+
+  List<double> evaluate() => [_dot(a.evaluate(), b.evaluate())];
 }
 
-class OpVectorTimesScalar extends Instruction {
-  final Instruction a;
-  final Instruction b;
+class OpVectorTimesScalar extends Instruction with Evaluable {
+  final Evaluable a;
+  final Evaluable b;
 
   OpVectorTimesScalar(this.a, this.b)
       : assert(a.type != floatT),
@@ -401,6 +439,11 @@ class OpVectorTimesScalar extends Instruction {
   List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
   List<Instruction> get deps => [a, b];
+
+  List<double> evaluate() {
+    final bVal = b.evaluate()[0];
+    return a.evaluate().map((a) => a * bVal).toList();
+  }
 }
 
 Type _resolveVecType(int elCount) {
@@ -414,8 +457,8 @@ Type _resolveVecType(int elCount) {
   return vec4T;
 }
 
-class OpVectorShuffle extends Instruction {
-  final Instruction source;
+class OpVectorShuffle extends Instruction with Evaluable {
+  final Evaluable source;
   final List<int> indices;
   final List<Instruction> deps;
 
@@ -438,43 +481,56 @@ class OpVectorShuffle extends Instruction {
         i.identify(source),
         ...indices,
       ];
+
+  List<double> evaluate() {
+    final result = source.evaluate();
+    final out = List<double>(indices.length);
+    for (int i = 0; i < indices.length; i++) {
+      out[i] = result[indices[i]];
+    }
+    return out;
+  }
 }
 
-class OpCompositeConstruct extends Instruction {
-  final List<Instruction> deps;
-  final int elementCount;
+class OpCompositeConstruct extends Instruction with Evaluable {
+  final List<Evaluable> deps;
 
   static int _count(List<Instruction> instructions) =>
       instructions.fold(0, (sum, i) => sum + i.type.elementCount);
 
-  OpCompositeConstruct(this.deps)
+  OpCompositeConstruct._(Type type, this.deps)
       : assert(deps != null),
-        assert(deps.length > 1),
-        assert(deps.length <= 4),
         assert(deps.every((child) => child.type != null)),
-        assert(_count(deps) <= 4),
-        elementCount = _count(deps),
+        assert(deps.every((child) => child.type.elementCount > 0)),
+        assert(_count(deps) == type.elementCount),
         super(
-          type: _resolveVecType(
-            deps.fold(0, (sum, child) => sum + child.type.elementCount),
-          ),
+          type: type,
           result: true,
           opCode: 80,
         );
 
+  OpCompositeConstruct.vec2(List<Evaluable> children) : this._(vec2T, children);
+  OpCompositeConstruct.vec3(List<Evaluable> children) : this._(vec3T, children);
+  OpCompositeConstruct.vec4(List<Evaluable> children) : this._(vec4T, children);
+
   List<int> operands(Identifier i) => deps.map(i.identify).toList();
+
+  List<double> evaluate() => deps.fold([], (out, child) {
+        out.addAll(child.evaluate());
+        return out;
+      });
 }
 
-abstract class OpExtInst extends Instruction {
+abstract class OpExtInst extends Instruction with Evaluable {
   final int extOp;
-  final List<Instruction> deps;
+  final List<Evaluable> deps;
 
-  OpExtInst(this.extOp, this.deps)
+  OpExtInst(this.extOp, this.deps, [Type type])
       : assert(deps.length > 0),
         assert(!deps.any((dep) => dep.type != deps[0].type)),
         super(
           opCode: 12,
-          type: deps[0].type,
+          type: type == null ? deps[0].type : type,
           result: true,
         );
 
@@ -483,4 +539,12 @@ abstract class OpExtInst extends Instruction {
         extOp,
         ...deps.map((inst) => i.identify(inst)),
       ];
+}
+
+double _dot(List<double> a, List<double> b) {
+  double sum = 0;
+  for (int i = 0; i < a.length; i++) {
+    sum += a[i] * b[i];
+  }
+  return sum;
 }

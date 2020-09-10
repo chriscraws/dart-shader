@@ -1,5 +1,8 @@
 // This file contains constants and classes exposing GLSL.std.450 external
 // instructions for SPIR-V.
+import 'dart:math';
+import 'package:vector_math/vector_math.dart' as vm;
+
 import 'instruction.dart';
 import 'instructions.dart';
 
@@ -40,141 +43,287 @@ final _normalize = 69;
 final _faceforward = 70;
 final _reflect = 71;
 
-class Trunc extends OpExtInst {
-  Trunc(Instruction a) : super(_trunc, [a]);
+abstract class _UniOp extends OpExtInst {
+  _UniOp(int op, Evaluable x) : super(op, [x]);
+
+  List<double> evaluate() => deps[0].evaluate().map(_op).toList();
+
+  double _op(double x);
 }
 
-class FAbs extends OpExtInst {
-  FAbs(Instruction a) : super(_fabs, [a]);
+class Trunc extends _UniOp {
+  Trunc(Evaluable a) : super(_trunc, a);
+
+  double _op(double x) => x.truncateToDouble();
 }
 
-class FSign extends OpExtInst {
-  FSign(Instruction a) : super(_fsign, [a]);
+class FAbs extends _UniOp {
+  FAbs(Evaluable a) : super(_fabs, a);
+
+  double _op(double x) => x.abs();
 }
 
-class Floor extends OpExtInst {
-  Floor(Instruction a) : super(_floor, [a]);
+class FSign extends _UniOp {
+  FSign(Evaluable a) : super(_fsign, a);
+
+  double _op(double x) => x.sign;
 }
 
-class Ceil extends OpExtInst {
-  Ceil(Instruction a) : super(_ceil, [a]);
+class Floor extends _UniOp {
+  Floor(Evaluable a) : super(_floor, a);
+
+  double _op(double x) => x.floorToDouble();
 }
 
-class Fract extends OpExtInst {
-  Fract(Instruction a) : super(_fract, [a]);
+class Ceil extends _UniOp {
+  Ceil(Evaluable a) : super(_ceil, a);
+
+  double _op(double x) => x.ceilToDouble();
 }
 
-class Radians extends OpExtInst {
-  Radians(Instruction a) : super(_radians, [a]);
+class Fract extends _UniOp {
+  Fract(Evaluable a) : super(_fract, a);
+
+  double _op(double x) => x - x.floorToDouble();
 }
 
-class Degrees extends OpExtInst {
-  Degrees(Instruction a) : super(_degrees, [a]);
+class Radians extends _UniOp {
+  Radians(Evaluable a) : super(_radians, a);
+
+  double _op(double x) => vm.radians(x);
 }
 
-class Sin extends OpExtInst {
-  Sin(Instruction a) : super(_sin, [a]);
+class Degrees extends _UniOp {
+  Degrees(Evaluable a) : super(_degrees, a);
+
+  double _op(double x) => vm.degrees(x);
 }
 
-class Cos extends OpExtInst {
-  Cos(Instruction a) : super(_cos, [a]);
+class Sin extends _UniOp {
+  Sin(Evaluable a) : super(_sin, a);
+
+  double _op(double x) => sin(x);
 }
 
-class Tan extends OpExtInst {
-  Tan(Instruction a) : super(_tan, [a]);
+class Cos extends _UniOp {
+  Cos(Evaluable a) : super(_cos, a);
+
+  double _op(double x) => cos(x);
 }
 
-class ASin extends OpExtInst {
-  ASin(Instruction a) : super(_asin, [a]);
+class Tan extends _UniOp {
+  Tan(Evaluable a) : super(_tan, a);
+
+  double _op(double x) => tan(x);
 }
 
-class ACos extends OpExtInst {
-  ACos(Instruction a) : super(_acos, [a]);
+class ASin extends _UniOp {
+  ASin(Evaluable a) : super(_asin, a);
+
+  double _op(double x) => asin(x);
 }
 
-class ATan extends OpExtInst {
-  ATan(Instruction a) : super(_atan, [a]);
+class ACos extends _UniOp {
+  ACos(Evaluable a) : super(_acos, a);
+
+  double _op(double x) => acos(x);
 }
 
-class Exp extends OpExtInst {
-  Exp(Instruction a) : super(_exp, [a]);
+class ATan extends _UniOp {
+  ATan(Evaluable a) : super(_atan, a);
+
+  double _op(double x) => atan(x);
 }
 
-class Log extends OpExtInst {
-  Log(Instruction a) : super(_log, [a]);
+class Exp extends _UniOp {
+  Exp(Evaluable a) : super(_exp, a);
+
+  double _op(double x) => exp(x);
 }
 
-class Exp2 extends OpExtInst {
-  Exp2(Instruction a) : super(_exp2, [a]);
+class Log extends _UniOp {
+  Log(Evaluable a) : super(_log, a);
+
+  double _op(double x) => log(x);
 }
 
-class Log2 extends OpExtInst {
-  Log2(Instruction a) : super(_log2, [a]);
+class Exp2 extends _UniOp {
+  Exp2(Evaluable a) : super(_exp2, a);
+
+  double _op(double x) => pow(2, x);
 }
 
-class Sqrt extends OpExtInst {
-  Sqrt(Instruction a) : super(_sqrt, [a]);
+class Log2 extends _UniOp {
+  Log2(Evaluable a) : super(_log2, a);
+
+  double _op(double x) => log(x) / ln2;
 }
 
-class InverseSqrt extends OpExtInst {
-  InverseSqrt(Instruction a) : super(_inverseSqrt, [a]);
+class Sqrt extends _UniOp {
+  Sqrt(Evaluable a) : super(_sqrt, a);
+
+  double _op(double x) => sqrt(x);
+}
+
+class InverseSqrt extends _UniOp {
+  InverseSqrt(Evaluable a) : super(_inverseSqrt, a);
+
+  double _op(double x) => 1.0 / sqrt(x);
 }
 
 class Length extends OpExtInst {
-  Length(Instruction a) : super(_length, [a]);
+  Length(Evaluable a) : super(_length, [a], floatT);
+
+  List<double> evaluate() => [_calculateLength(deps[0].evaluate())];
 }
 
 class Normalize extends OpExtInst {
-  Normalize(Instruction a) : super(_normalize, [a]);
+  Normalize(Evaluable a) : super(_normalize, [a]);
+
+  List<double> evaluate() {
+    final aResult = deps[0].evaluate();
+    final len = _calculateLength(aResult);
+    for (int i = 0; i < aResult.length; i++) {
+      aResult[i] /= len;
+    }
+    return aResult;
+  }
 }
 
-class ATan2 extends OpExtInst {
-  ATan2(Instruction a, Instruction b) : super(_atan2, [a, b]);
+abstract class _BinOp extends OpExtInst {
+  _BinOp(int op, Evaluable x, Evaluable y) : super(op, [x, y]);
+
+  List<double> evaluate() {
+    final valueA = deps[0].evaluate();
+    final valueB = deps[1].evaluate();
+    final out = List<double>(valueA.length);
+    for (int i = 0; i < out.length; i++) {
+      out[i] = _op(valueA[i], valueB[i]);
+    }
+    return out;
+  }
+
+  double _op(double x, double y);
 }
 
-class Pow extends OpExtInst {
-  Pow(Instruction a, Instruction b) : super(_pow, [a, b]);
+class ATan2 extends _BinOp {
+  ATan2(Evaluable a, Evaluable b) : super(_atan2, a, b);
+
+  double _op(double x, double y) => atan2(x, y);
 }
 
-class FMin extends OpExtInst {
-  FMin(Instruction a, Instruction b) : super(_fmin, [a, b]);
+class Pow extends _BinOp {
+  Pow(Evaluable a, Evaluable b) : super(_pow, a, b);
+
+  double _op(double x, double y) => pow(x, y);
 }
 
-class FMax extends OpExtInst {
-  FMax(Instruction a, Instruction b) : super(_fmax, [a, b]);
+class FMin extends _BinOp {
+  FMin(Evaluable a, Evaluable b) : super(_fmin, a, b);
+
+  double _op(double x, double y) => min(x, y);
 }
 
-class FClamp extends OpExtInst {
-  FClamp(Instruction x, Instruction min, Instruction max)
-      : super(_fclamp, [x, min, max]);
+class FMax extends _BinOp {
+  FMax(Evaluable a, Evaluable b) : super(_fmax, a, b);
+
+  double _op(double x, double y) => max(x, y);
 }
 
-class FMix extends OpExtInst {
-  FMix(Instruction x, Instruction y, Instruction a) : super(_fmix, [x, y, a]);
+abstract class _TerOp extends OpExtInst {
+  _TerOp(int op, Evaluable x, Evaluable y, Evaluable z) : super(op, [x, y, z]);
+
+  List<double> evaluate() {
+    final valueA = deps[0].evaluate();
+    final valueB = deps[1].evaluate();
+    final valueC = deps[2].evaluate();
+    final out = List<double>(valueA.length);
+    for (int i = 0; i < out.length; i++) {
+      out[i] = _op(valueA[i], valueB[i], valueC[i]);
+    }
+    return out;
+  }
+
+  double _op(double x, double y, double z);
 }
 
-class Step extends OpExtInst {
-  Step(Instruction edge, Instruction x) : super(_step, [edge, x]);
+class FClamp extends _TerOp {
+  FClamp(Evaluable x, Evaluable min, Evaluable max)
+      : super(_fclamp, x, min, max);
+
+  double _op(double x, double y, double z) => x.clamp(y, z);
 }
 
-class SmoothStep extends OpExtInst {
-  SmoothStep(Instruction edge0, Instruction edge1, Instruction x)
-      : super(_smoothstep, [edge0, edge1, x]);
+class FMix extends _TerOp {
+  FMix(Evaluable x, Evaluable y, Evaluable a) : super(_fmix, x, y, a);
+
+  double _op(double x, double y, double z) => vm.mix(x, y, z);
+}
+
+class Step extends _BinOp {
+  Step(Evaluable edge, Evaluable x) : super(_step, edge, x);
+
+  double _op(double x, double y) => y < x ? 0 : 1;
+}
+
+class SmoothStep extends _TerOp {
+  SmoothStep(Evaluable edge0, Evaluable edge1, Evaluable x)
+      : super(_smoothstep, edge0, edge1, x);
+
+  double _op(double x, double y, double z) => vm.smoothStep(x, y, z);
 }
 
 class Distance extends OpExtInst {
-  Distance(Instruction a, Instruction b) : super(_distance, [a, b]);
-}
+  Distance(Evaluable a, Evaluable b) : super(_distance, [a, b], floatT);
 
-class Cross extends OpExtInst {
-  Cross(Instruction a, Instruction b) : super(_cross, [a, b]);
+  List<double> evaluate() {
+    final diff = List<double>(type.elementCount);
+    final resA = deps[0].evaluate();
+    final resB = deps[1].evaluate();
+    for (int i = 0; i < diff.length; i++) {
+      diff[i] = resB[i] - resA[i];
+    }
+    return [_calculateLength(diff)];
+  }
 }
 
 class FaceForward extends OpExtInst {
-  FaceForward(Instruction n, Instruction i, Instruction nref)
+  FaceForward(Evaluable n, Evaluable i, Evaluable nref)
       : super(_faceforward, [n, i, nref]);
+
+  List<double> evaluate() => _dot(deps[1].evaluate(), deps[2].evaluate()) < 0
+      ? deps[0].evaluate()
+      : deps[0].evaluate().map((i) => -i).toList();
 }
 
 class Reflect extends OpExtInst {
-  Reflect(Instruction i, Instruction n) : super(_reflect, [i, n]);
+  Reflect(Evaluable i, Evaluable n) : super(_reflect, [i, n]);
+
+  List<double> evaluate() {
+    final iRes = deps[0].evaluate();
+    final nRes = deps[1].evaluate();
+    final dot = _dot(nRes, iRes);
+    final out = List<double>(iRes.length);
+    for (int index = 0; index < out.length; index++) {
+      out[index] = iRes[index] - 2.0 * dot * nRes[index];
+    }
+    return out;
+  }
+}
+
+double _calculateLength(List<double> vector) {
+  double sum = 0;
+  for (int i = 0; i < vector.length; i++) {
+    final el = vector[i];
+    sum += el * el;
+  }
+  return sqrt(sum);
+}
+
+double _dot(List<double> a, List<double> b) {
+  double sum = 0;
+  for (int i = 0; i < a.length; i++) {
+    sum += a[i] * b[i];
+  }
+  return sum;
 }

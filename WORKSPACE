@@ -11,3 +11,27 @@ http_archive(
   urls = ["https://github.com/KhronosGroup/SPIRV-Headers/archive/1.5.3.reservations1.zip"],
   strip_prefix = "SPIRV-Headers-1.5.3.reservations1",
 )
+
+http_archive(
+  name = "com_google_googletest",
+  urls = ["https://github.com/google/googletest/archive/release-1.10.0.zip"],
+  strip_prefix = "googletest-release-1.10.0",
+)
+
+http_archive(
+     name = "com_google_absl",
+     urls = ["https://github.com/abseil/abseil-cpp/archive/master.zip"],
+     strip_prefix = "abseil-cpp-master",
+)
+
+http_archive(
+    name = "rules_cc",
+    strip_prefix = "rules_cc-master",
+    urls = ["https://github.com/bazelbuild/rules_cc/archive/master.zip"],
+)
+
+http_archive(
+    name = "rules_python",
+    strip_prefix = "rules_python-master",
+    urls = ["https://github.com/bazelbuild/rules_python/archive/master.zip"],
+)

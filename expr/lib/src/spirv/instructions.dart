@@ -162,7 +162,7 @@ class OpFunction extends Instruction {
         );
 
   List<int> operands(Identifier i) => [
-        8, // const function
+        0, // no function control
         i.identify(fnType), // function type
       ];
 

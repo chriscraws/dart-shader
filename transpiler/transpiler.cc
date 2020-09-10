@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 
+#include "external/spirv_headers/include/spirv/unified1/GLSL.std.450.h"
 #include "external/spirv_headers/include/spirv/unified1/spirv.hpp"
 #include "external/spirv_tools/include/spirv-tools/libspirv.h"
 
@@ -36,10 +37,12 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleOperator(const spv_parsed_instruction_t* inst, char op);
   spv_result_t HandleBuiltin(const spv_parsed_instruction_t* inst,
                              std::string name);
+  spv_result_t HandleExtInst(const spv_parsed_instruction_t* inst);
 
  private:
   std::string ResolveName(uint32_t id);
   std::string ResolveType(uint32_t id);
+  std::string ResolveGLSLName(uint32_t id);
 
   const spv_context spv_context_;
   spv_diagnostic spv_diagnostic_;
@@ -144,6 +147,9 @@ spv_result_t parse_instruction(
     case spv::OpDot:
       result = interpreter->HandleBuiltin(parsed_instruction, "dot");
       break;
+    case spv::OpExtInst:
+      result = interpreter->HandleExtInst(parsed_instruction);
+      break;
     default:
       return SPV_UNSUPPORTED;
   }
@@ -194,7 +200,7 @@ Result TranspilerImpl::Transpile(const char* data, size_t length) {
   return {.status = kSuccess};
 }
 
-std::string TranspilerImpl::GetSkSL() { return ""; }
+std::string TranspilerImpl::GetSkSL() { return sksl_.str(); }
 
 void TranspilerImpl::set_last_op(uint32_t op) { last_op_ = op; }
 
@@ -539,6 +545,121 @@ spv_result_t TranspilerImpl::HandleBuiltin(const spv_parsed_instruction_t* inst,
         << ResolveName(get_operand(inst, 1)) << ");\n";
 
   return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleExtInst(
+    const spv_parsed_instruction_t* inst) {
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+
+  if (inst->ext_inst_type != SPV_EXT_INST_TYPE_GLSL_STD_450) {
+    last_error_msg_ = "OpExtInst: Must be from 'glsl.450.std'";
+    return SPV_UNSUPPORTED;
+  }
+
+  static constexpr int kExtInstOperationIndex = 1;
+  static constexpr int kExtInstFirstOperandIndex = 2;
+  uint32_t glsl_op = get_operand(inst, kExtInstOperationIndex);
+  std::string glsl_name = ResolveGLSLName(glsl_op);
+
+  if (glsl_name.empty()) {
+    last_error_msg_ = "OpExtInst: '" + std::to_string(glsl_op) +
+                      "' is not a supported GLSL instruction.";
+    return SPV_UNSUPPORTED;
+  }
+
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id) << " = "
+        << glsl_name << "(";
+
+  int op_count = inst->num_operands - kExtInstFirstOperandIndex;
+  for (int i = 0; i < op_count; i++) {
+    sksl_ << ResolveName(get_operand(inst, kExtInstFirstOperandIndex + i));
+    if (i != op_count - 1) {
+      sksl_ << ", ";
+    }
+  }
+
+  sksl_ << ");\n";
+
+  return SPV_SUCCESS;
+}
+
+std::string TranspilerImpl::ResolveGLSLName(uint32_t id) {
+  switch (id) {
+    case GLSLstd450Trunc:
+      return "trunc";
+    case GLSLstd450FAbs:
+      return "abs";
+    case GLSLstd450FSign:
+      return "sign";
+    case GLSLstd450Floor:
+      return "floor";
+    case GLSLstd450Ceil:
+      return "ceil";
+    case GLSLstd450Fract:
+      return "fract";
+    case GLSLstd450Radians:
+      return "radians";
+    case GLSLstd450Degrees:
+      return "degrees";
+    case GLSLstd450Sin:
+      return "sin";
+    case GLSLstd450Cos:
+      return "cos";
+    case GLSLstd450Tan:
+      return "tan";
+    case GLSLstd450Asin:
+      return "asin";
+    case GLSLstd450Acos:
+      return "acos";
+    case GLSLstd450Atan:
+      return "atan";
+    case GLSLstd450Atan2:
+      return "atan2";
+    case GLSLstd450Pow:
+      return "pow";
+    case GLSLstd450Exp:
+      return "exp";
+    case GLSLstd450Log:
+      return "log";
+    case GLSLstd450Exp2:
+      return "exp2";
+    case GLSLstd450Log2:
+      return "log2";
+    case GLSLstd450Sqrt:
+      return "sqrt";
+    case GLSLstd450InverseSqrt:
+      return "inversesqrt";
+    case GLSLstd450FMin:
+      return "min";
+    case GLSLstd450FMax:
+      return "max";
+    case GLSLstd450FClamp:
+      return "clamp";
+    case GLSLstd450FMix:
+      return "mix";
+    case GLSLstd450Step:
+      return "step";
+    case GLSLstd450SmoothStep:
+      return "smoothstep";
+    case GLSLstd450Length:
+      return "length";
+    case GLSLstd450Distance:
+      return "distance";
+    case GLSLstd450Cross:
+      return "cross";
+    case GLSLstd450Normalize:
+      return "normalize";
+    case GLSLstd450FaceForward:
+      return "faceforward";
+    case GLSLstd450Reflect:
+      return "reflect";
+    default:
+      return "";
+  }
 }
 
 }  // namespace ssir

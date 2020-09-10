@@ -19,8 +19,6 @@ class TranspilerImpl : public Transpiler {
 
   void set_last_op(uint32_t op);
 
-  std::string ResolveName(uint32_t id);
-
   spv_result_t HandleCapability(const spv_parsed_instruction_t* inst);
   spv_result_t HandleExtInstImport(const spv_parsed_instruction_t* inst);
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
@@ -34,8 +32,15 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleReturnValue(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleFNegate(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleOperator(const spv_parsed_instruction_t* inst, char op);
+  spv_result_t HandleBuiltin(const spv_parsed_instruction_t* inst,
+                             std::string name);
 
  private:
+  std::string ResolveName(uint32_t id);
+  std::string ResolveType(uint32_t id);
+
   const spv_context spv_context_;
   spv_diagnostic spv_diagnostic_;
 
@@ -114,6 +119,31 @@ spv_result_t parse_instruction(
     case spv::OpReturnValue:
       result = interpreter->HandleReturnValue(parsed_instruction);
       break;
+    case spv::OpFNegate:
+      result = interpreter->HandleFNegate(parsed_instruction);
+      break;
+    case spv::OpFAdd:
+      result = interpreter->HandleOperator(parsed_instruction, '+');
+      break;
+    case spv::OpFSub:
+      result = interpreter->HandleOperator(parsed_instruction, '-');
+      break;
+    case spv::OpFMul:
+    case spv::OpVectorTimesScalar:
+    case spv::OpVectorTimesMatrix:
+    case spv::OpMatrixTimesVector:
+    case spv::OpMatrixTimesMatrix:
+      result = interpreter->HandleOperator(parsed_instruction, '*');
+      break;
+    case spv::OpFDiv:
+      result = interpreter->HandleOperator(parsed_instruction, '/');
+      break;
+    case spv::OpFMod:
+      result = interpreter->HandleBuiltin(parsed_instruction, "mod");
+      break;
+    case spv::OpDot:
+      result = interpreter->HandleBuiltin(parsed_instruction, "dot");
+      break;
     default:
       return SPV_UNSUPPORTED;
   }
@@ -170,6 +200,19 @@ void TranspilerImpl::set_last_op(uint32_t op) { last_op_ = op; }
 
 std::string TranspilerImpl::ResolveName(uint32_t id) {
   return "i" + std::to_string(id);
+}
+
+std::string TranspilerImpl::ResolveType(uint32_t id) {
+  if (id == float_type_) {
+    return "float";
+  } else if (id == vec2_type_) {
+    return "vec2";
+  } else if (id == vec3_type_) {
+    return "vec3";
+  } else if (id == vec4_type_) {
+    return "vec4";
+  }
+  return "";
 }
 
 spv_result_t TranspilerImpl::HandleCapability(
@@ -433,9 +476,7 @@ spv_result_t TranspilerImpl::HandleLabel(const spv_parsed_instruction_t* inst) {
         "OpLabel: The last instruction should have been OpFunctionParameter.";
     return SPV_UNSUPPORTED;
   }
-
   sksl_ << ") {\n";
-
   return SPV_SUCCESS;
 }
 
@@ -448,6 +489,55 @@ spv_result_t TranspilerImpl::HandleReturnValue(
   }
   return_ = get_operand(inst, kReturnIdIndex);
   sksl_ << "  return half4(" << ResolveName(return_) << ");\n";
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleFNegate(
+    const spv_parsed_instruction_t* inst) {
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id) << " = -"
+        << ResolveName(get_operand(inst, 0)) << ";\n";
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleOperator(
+    const spv_parsed_instruction_t* inst, char op) {
+  if (inst->num_operands != 2) {
+    last_error_msg_ = "Operator '";
+    last_error_msg_.push_back(op);
+    last_error_msg_ += "' needs two arguments.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id) << " = "
+        << ResolveName(get_operand(inst, 0)) << op
+        << ResolveName(get_operand(inst, 1)) << ";\n";
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleBuiltin(const spv_parsed_instruction_t* inst,
+                                           std::string name) {
+  if (inst->num_operands != 2) {
+    last_error_msg_ = "Builtin '" + name + "' needs two arguments.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id)
+        << " = " + name + "(" << ResolveName(get_operand(inst, 0)) << ", "
+        << ResolveName(get_operand(inst, 1)) << ");\n";
+
   return SPV_SUCCESS;
 }
 

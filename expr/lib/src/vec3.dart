@@ -1,7 +1,12 @@
 part of '../expr.dart';
 
+// Both [Scalar] and [Vec3] implement this mixin.
+mixin Vec3OrScalar on Expression {
+  bool get _isVec3;
+}
+
 /// Vector [Expression] with three components.
-class Vec3 extends Expression {
+class Vec3 extends Expression with Vec3OrScalar {
   Vec3._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec3 with value [x, y].
@@ -36,19 +41,29 @@ class Vec3 extends Expression {
   Vec3 operator -() => Vec3._(OpFNegate(this._node));
 
   /// Multiply by [b].
-  Vec3 operator *(Vec3 b) => Vec3._(OpFMul(this._node, b._node));
+  Vec3 operator *(Vec3OrScalar b) {
+    if (b._isVec3) {
+      return Vec3._(OpFMul(this._node, b._node));
+    } else {
+      return Vec3._(OpVectorTimesScalar(this._node, b._node));
+    }
+  }
 
   /// Divide by [b].
-  Vec3 operator /(Vec3 b) => Vec3._(OpFDiv(this._node, b._node));
+  Vec3 operator /(Vec3OrScalar b) {
+    if (b._isVec3) {
+      return Vec3._(OpFDiv(this._node, b._node));
+    } else {
+      return Vec3._(
+          OpVectorTimesScalar(this._node, OpFDiv(OpConstant(1), b._node)));
+    }
+  }
 
   /// Modulo by [b].
   Vec3 operator %(Vec3 b) => Vec3._(OpFMod(this._node, b._node));
 
   /// Raise to the power of [b].
   Vec3 operator ^(Vec3 b) => Vec3._(Pow(this._node, b._node));
-
-  /// Return a new [Vec3] scaled by a [Scalar] value.
-  Vec3 scale(Scalar s) => Vec3._(OpVectorTimesScalar(this._node, s._node));
 
   /// Length.
   Scalar length() => Scalar._(Length(this._node));
@@ -143,4 +158,6 @@ class Vec3 extends Expression {
   Vec3 reflect(Vec3 normal) => Vec3._(Reflect(this._node, normal._node));
 
   vm.Vector3 evaluate() => vm.Vector3.array(_node.evaluate());
+
+  bool get _isVec3 => true;
 }

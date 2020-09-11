@@ -1,7 +1,12 @@
 part of '../expr.dart';
 
+// Both [Scalar] and [Vec4] implement this mixin.
+mixin Vec4OrScalar on Expression {
+  bool get _isVec4;
+}
+
 /// Vector [Expression] with four components.
-class Vec4 extends Expression {
+class Vec4 extends Expression with Vec4OrScalar {
   Vec4._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec4 with value [x, y, z, w].
@@ -36,19 +41,29 @@ class Vec4 extends Expression {
   Vec4 operator -() => Vec4._(OpFNegate(this._node));
 
   /// Multiply by [b].
-  Vec4 operator *(Vec4 b) => Vec4._(OpFMul(this._node, b._node));
+  Vec4 operator *(Vec4OrScalar b) {
+    if (b._isVec4) {
+      return Vec4._(OpFMul(this._node, b._node));
+    } else {
+      return Vec4._(OpVectorTimesScalar(this._node, b._node));
+    }
+  }
 
   /// Divide by [b].
-  Vec4 operator /(Vec4 b) => Vec4._(OpFDiv(this._node, b._node));
+  Vec4 operator /(Vec4OrScalar b) {
+    if (b._isVec4) {
+      return Vec4._(OpFDiv(this._node, b._node));
+    } else {
+      return Vec4._(
+          OpVectorTimesScalar(this._node, OpFDiv(OpConstant(1), b._node)));
+    }
+  }
 
   /// Modulo by [b].
   Vec4 operator %(Vec4 b) => Vec4._(OpFMod(this._node, b._node));
 
   /// Raise to the power of [b].
   Vec4 operator ^(Vec4 b) => Vec4._(Pow(this._node, b._node));
-
-  /// Return a new [Vec4] scaled by a [Scalar] value.
-  Vec4 scale(Scalar s) => Vec4._(OpVectorTimesScalar(this._node, s._node));
 
   /// Length.
   Scalar length() => Scalar._(Length(this._node));
@@ -143,4 +158,6 @@ class Vec4 extends Expression {
   Vec4 reflect(Vec4 normal) => Vec4._(Reflect(this._node, normal._node));
 
   vm.Vector4 evaluate() => vm.Vector4.array(_node.evaluate());
+
+  bool get _isVec4 => true;
 }

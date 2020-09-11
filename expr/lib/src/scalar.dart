@@ -1,7 +1,7 @@
 part of '../expr.dart';
 
 /// Floating-point [Expression].
-class Scalar extends Expression {
+class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   Scalar._(Evaluable child) : super._(child);
 
   /// Constructs a constant Scalar with value [x].
@@ -115,4 +115,8 @@ class Scalar extends Expression {
       Scalar._(SmoothStep(a._node, b._node, this._node));
 
   double evaluate() => _node.evaluate()[0];
+
+  bool get _isVec4 => false;
+  bool get _isVec3 => false;
+  bool get _isVec2 => false;
 }

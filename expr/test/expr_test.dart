@@ -9,7 +9,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 /// If true, overwrites all the golen files. If you run the tests with this
 /// set to true, be sure to use `spirv-val` to validate all files matching
 /// `test/*.golden`. Then set this back to false.
-final overwriteGoldens = true;
+final overwriteGoldens = false;
 
 Future<void> matchGolden(ByteBuffer item, String filename) async {
   assert(filename != null);
@@ -35,7 +35,7 @@ void main() {
 
     final scalar = (b * Scalar(2) + (a * -b) / a) % Scalar(1.5);
 
-    final color = Vec4.of([scalar, scalar, scalar, scalar]).scale(c);
+    final color = Vec4.of([scalar, scalar, scalar, scalar]) * c;
 
     final shader = Shader(color: color);
     await matchGolden(shader.toSPIRV(), 'scalar.golden');
@@ -49,7 +49,7 @@ void main() {
     final b = Vec2(1, 1);
     final c = Vec2Uniform()..value = vm.Vector2(6, 7);
 
-    Vec2 vec2 = (b.scale(Scalar(2)) + (a * -b) / a) % Vec2(1.5, 1.5);
+    Vec2 vec2 = (b * Scalar(2) + (a * -b) / a) % Vec2(1.5, 1.5);
     vec2 *= c;
 
     final color = Vec4.of([vec2, vec2]);
@@ -67,8 +67,7 @@ void main() {
     final b = Vec3(1, 1, 1);
     final c = Vec3Uniform()..value = vm.Vector3(6, 7, 8);
 
-    final vec3 =
-        ((b.scale(Scalar(2)) + (a * -b) / a) % Vec3(1.5, 1.5, 1.5)) * c;
+    final vec3 = ((b * Scalar(2) + (a * -b) / a) % Vec3(1.5, 1.5, 1.5)) * c;
 
     final color = Vec4.of([vec3, Scalar(1.0)]);
 
@@ -86,7 +85,7 @@ void main() {
     final c = Vec4Uniform()..value = vm.Vector4(2, 3, 4, 5);
 
     final color =
-        ((b.scale(Scalar(2)) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5)) * c;
+        ((b * Scalar(2) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5)) * c;
 
     final shader = Shader(color: color);
     await matchGolden(shader.toSPIRV(), 'vec4op.golden');

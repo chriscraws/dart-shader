@@ -1,7 +1,12 @@
 part of '../expr.dart';
 
+// Both [Scalar] and [Vec2] implement this mixin.
+mixin Vec2OrScalar on Expression {
+  bool get _isVec2;
+}
+
 /// Vector [Expression] with two components.
-class Vec2 extends Expression {
+class Vec2 extends Expression with Vec2OrScalar {
   Vec2._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec2 with value [x, y].
@@ -33,19 +38,29 @@ class Vec2 extends Expression {
   Vec2 operator -() => Vec2._(OpFNegate(this._node));
 
   /// Multiply by [b].
-  Vec2 operator *(Vec2 b) => Vec2._(OpFMul(this._node, b._node));
+  Vec2 operator *(Vec2OrScalar b) {
+    if (b._isVec2) {
+      return Vec2._(OpFMul(this._node, b._node));
+    } else {
+      return Vec2._(OpVectorTimesScalar(this._node, b._node));
+    }
+  }
 
   /// Divide by [b].
-  Vec2 operator /(Vec2 b) => Vec2._(OpFDiv(this._node, b._node));
+  Vec2 operator /(Vec2OrScalar b) {
+    if (b._isVec2) {
+      return Vec2._(OpFDiv(this._node, b._node));
+    } else {
+      return Vec2._(
+          OpVectorTimesScalar(this._node, OpFDiv(OpConstant(1), b._node)));
+    }
+  }
 
   /// Modulo by [b].
   Vec2 operator %(Vec2 b) => Vec2._(OpFMod(this._node, b._node));
 
   /// Raise to the power of [b].
   Vec2 operator ^(Vec2 b) => Vec2._(Pow(this._node, b._node));
-
-  /// Return a new [Vec2] scaled by a [Scalar] value.
-  Vec2 scale(Scalar s) => Vec2._(OpVectorTimesScalar(this._node, s._node));
 
   /// Length.
   Scalar length() => Scalar._(Length(this._node));
@@ -140,4 +155,6 @@ class Vec2 extends Expression {
   Vec2 reflect(Vec2 normal) => Vec2._(Reflect(this._node, normal._node));
 
   vm.Vector2 evaluate() => vm.Vector2.array(_node.evaluate());
+
+  bool get _isVec2 => true;
 }

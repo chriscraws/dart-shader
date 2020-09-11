@@ -31,23 +31,26 @@ void main() {
   test('scalar ops', () async {
     final a = Scalar(0.5);
     final b = Scalar(1);
+    final c = ScalarUniform()..value = 7;
 
     final scalar = (b * Scalar(2) + (a * -b) / a) % Scalar(1.5);
 
-    final color = Vec4.of([scalar, scalar, scalar, scalar]);
+    final color = Vec4.of([scalar, scalar, scalar, scalar]).scale(c);
 
     final shader = Shader(color: color);
     await matchGolden(shader.toSPIRV(), 'scalar.golden');
 
-    final result = scalar.evaluate();
-    expect(result, equals(1));
+    final result = (scalar * c).evaluate();
+    expect(result, equals(7));
   });
 
   test('vec2 ops', () async {
     final a = Vec2(1.0, 0.25);
     final b = Vec2(1, 1);
+    final c = Vec2Uniform()..value = vm.Vector2(6, 7);
 
-    final vec2 = (b.scale(Scalar(2)) + (a * -b) / a) % Vec2(1.5, 1.5);
+    Vec2 vec2 = (b.scale(Scalar(2)) + (a * -b) / a) % Vec2(1.5, 1.5);
+    vec2 *= c;
 
     final color = Vec4.of([vec2, vec2]);
 
@@ -55,15 +58,17 @@ void main() {
     await matchGolden(shader.toSPIRV(), 'vec2op.golden');
 
     final result = vec2.evaluate();
-    expect(result, equals(vm.Vector2.all(1)));
-    expect(vec2.dot(b).evaluate(), equals(2));
+    expect(result, equals(vm.Vector2(6, 7)));
+    expect(vec2.dot(b).evaluate(), equals(13));
   });
 
   test('vec3 ops', () async {
     final a = Vec3(1.0, 0.25, 0.75);
     final b = Vec3(1, 1, 1);
+    final c = Vec3Uniform()..value = vm.Vector3(6, 7, 8);
 
-    final vec3 = (b.scale(Scalar(2)) + (a * -b) / a) % Vec3(1.5, 1.5, 1.5);
+    final vec3 =
+        ((b.scale(Scalar(2)) + (a * -b) / a) % Vec3(1.5, 1.5, 1.5)) * c;
 
     final color = Vec4.of([vec3, Scalar(1.0)]);
 
@@ -71,22 +76,23 @@ void main() {
     await matchGolden(shader.toSPIRV(), 'vec3op.golden');
 
     final result = vec3.evaluate();
-    expect(result, equals(vm.Vector3.all(1)));
-    expect(vec3.dot(b).evaluate(), equals(3));
+    expect(result, equals(vm.Vector3(6, 7, 8)));
+    expect(vec3.dot(b).evaluate(), equals(21));
   });
 
   test('vec4 ops', () async {
     final a = Vec4(1.0, 0.25, 0.75, 1.0);
     final b = Vec4(1, 1, 1, 1);
+    final c = Vec4Uniform()..value = vm.Vector4(2, 3, 4, 5);
 
     final color =
-        (b.scale(Scalar(2)) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5);
+        ((b.scale(Scalar(2)) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5)) * c;
 
     final shader = Shader(color: color);
     await matchGolden(shader.toSPIRV(), 'vec4op.golden');
 
     final result = color.evaluate();
-    expect(result, equals(vm.Vector4.all(1)));
-    expect(color.dot(b).evaluate(), equals(4));
+    expect(result, equals(vm.Vector4(2, 3, 4, 5)));
+    expect(color.dot(b).evaluate(), equals(14));
   });
 }

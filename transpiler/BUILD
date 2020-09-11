@@ -18,6 +18,7 @@ cc_test(
   name = "transpiler_test",
   srcs = ["transpiler_test.cc"],
   data = [
+    "//expr/test/goldens:glslop.golden",
     "//expr/test/goldens:simple.golden",
     "//expr/test/goldens:scalar.golden",
     "//expr/test/goldens:vec2op.golden",

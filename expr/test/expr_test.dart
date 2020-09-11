@@ -94,4 +94,41 @@ void main() {
     expect(result, equals(vm.Vector4(2, 3, 4, 5)));
     expect(color.dot(b).evaluate(), equals(14));
   });
+
+  test('glsl ops', () async {
+    final a = Vec3(1.0, 1.0, 1.0);
+    final b = Vec3(0.5, 0.5, 0.5);
+    final c = Vec3(2.0, 2.0, 2.0);
+
+    final out = a
+        .abs()
+        .acos()
+        .asin()
+        .atan()
+        .ceil()
+        .clamp(b, c)
+        .cos()
+        .degrees()
+        .exp()
+        .exp2()
+        .faceForward(b, c)
+        .floor()
+        .fract()
+        .isqrt()
+        .log()
+        .log2()
+        .mix(b, c)
+        .radians()
+        .reflect(b)
+        .sign()
+        .sin()
+        .smoothStep(b, c)
+        .sqrt()
+        .step(b)
+        .tan()
+        .truncate();
+
+    final shader = Shader(color: Vec4.of([out, Scalar(1)]));
+    await matchGolden(shader.toSPIRV(), 'glslop.golden');
+  });
 }

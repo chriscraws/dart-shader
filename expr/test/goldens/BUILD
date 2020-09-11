@@ -1,4 +1,5 @@
 exports_files([
+  "glslop.golden",
   "simple.golden",
   "scalar.golden",
   "vec2op.golden",

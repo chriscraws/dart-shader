@@ -93,14 +93,19 @@ const char* get_literal(const spv_parsed_instruction_t* parsed_instruction,
            ->words[parsed_instruction->operands[operand_index].offset]);
 }
 
-spv_result_t parse_header(void* user_data, spv_endianness_t endian,
-                          uint32_t magic, uint32_t version, uint32_t generator,
-                          uint32_t id_bound, uint32_t reserverd) {
+spv_result_t parse_header(void* user_data,
+                          spv_endianness_t endian,
+                          uint32_t magic,
+                          uint32_t version,
+                          uint32_t generator,
+                          uint32_t id_bound,
+                          uint32_t reserverd) {
   return SPV_SUCCESS;
 }
 
 spv_result_t parse_instruction(
-    void* user_data, const spv_parsed_instruction_t* parsed_instruction) {
+    void* user_data,
+    const spv_parsed_instruction_t* parsed_instruction) {
   auto* interpreter = static_cast<TranspilerImpl*>(user_data);
   spv_result_t result = SPV_UNSUPPORTED;
 
@@ -204,7 +209,7 @@ std::unique_ptr<Transpiler> Transpiler::create() {
 }
 
 TranspilerImpl::TranspilerImpl()
-    : spv_context_(spvContextCreate(SPV_ENV_UNIVERSAL_1_2)) {}
+    : spv_context_(spvContextCreate(SPV_ENV_UNIVERSAL_1_5)) {}
 
 TranspilerImpl::~TranspilerImpl() {
   if (spv_context_ != NULL) {
@@ -236,18 +241,25 @@ Result TranspilerImpl::Transpile(const char* data, size_t length) {
     sksl_.str("");
     return {.status = kFailure,
             .message = last_error_msg_.empty()
-                           ? "spv error code: " + std::to_string(result)
+                           ? "spv error code " + std::to_string(result) +
+                                 " on op " + std::to_string(last_op_)
                            : last_error_msg_};
   }
 
   return {.status = kSuccess};
 }
 
-std::string TranspilerImpl::GetSkSL() { return sksl_.str(); }
+std::string TranspilerImpl::GetSkSL() {
+  return sksl_.str();
+}
 
-void TranspilerImpl::set_last_op(uint32_t op) { last_op_ = op; }
+void TranspilerImpl::set_last_op(uint32_t op) {
+  last_op_ = op;
+}
 
-void TranspilerImpl::set_last_msg(std::string msg) { last_error_msg_ = msg; }
+void TranspilerImpl::set_last_msg(std::string msg) {
+  last_error_msg_ = msg;
+}
 
 std::string TranspilerImpl::ResolveName(uint32_t id) {
   return "i" + std::to_string(id);
@@ -627,7 +639,8 @@ spv_result_t TranspilerImpl::HandleFNegate(
 }
 
 spv_result_t TranspilerImpl::HandleOperator(
-    const spv_parsed_instruction_t* inst, char op) {
+    const spv_parsed_instruction_t* inst,
+    char op) {
   if (inst->num_operands != 4) {
     last_error_msg_ = "Operator '";
     last_error_msg_.push_back(op);

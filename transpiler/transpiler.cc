@@ -29,14 +29,17 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleTypePointer(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleConstant(const spv_parsed_instruction_t* inst);
   spv_result_t HandleConstantComposite(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleVariable(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleReturnValue(const spv_parsed_instruction_t* inst);
   spv_result_t HandleCompositeConstruct(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleLoad(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFNegate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleOperator(const spv_parsed_instruction_t* inst, char op);
   spv_result_t HandleBuiltin(const spv_parsed_instruction_t* inst,
@@ -58,10 +61,20 @@ class TranspilerImpl : public Transpiler {
   std::string last_error_msg_ = "";
 
   // Result-IDs of important instructions.
-  uint32_t main_function_type_ = 0, float_type_ = 0, vec2_type_ = 0,
-           vec3_type_ = 0, vec4_type_ = 0, main_function_ = 0,
-           frag_position_param_ = 0, return_ = 0;
+  uint32_t main_function_type_ = 0;
+  uint32_t float_type_ = 0;
+  uint32_t vec2_type_ = 0;
+  uint32_t vec3_type_ = 0;
+  uint32_t vec4_type_ = 0;
+  uint32_t float_uniform_type_ = 0;
+  uint32_t vec2_uniform_type_ = 0;
+  uint32_t vec3_uniform_type_ = 0;
+  uint32_t vec4_uniform_type_ = 0;
+  uint32_t main_function_ = 0;
+  uint32_t frag_position_param_ = 0;
+  uint32_t return_ = 0;
   uint32_t last_op_ = 0;
+
   std::stringstream sksl_;
 };
 
@@ -110,6 +123,9 @@ spv_result_t parse_instruction(
     case spv::OpTypeVector:
       result = interpreter->HandleTypeVector(parsed_instruction);
       break;
+    case spv::OpTypePointer:
+      result = interpreter->HandleTypePointer(parsed_instruction);
+      break;
     case spv::OpTypeFunction:
       result = interpreter->HandleTypeFunction(parsed_instruction);
       break;
@@ -118,6 +134,9 @@ spv_result_t parse_instruction(
       break;
     case spv::OpConstantComposite:
       result = interpreter->HandleConstantComposite(parsed_instruction);
+      break;
+    case spv::OpVariable:
+      result = interpreter->HandleVariable(parsed_instruction);
       break;
     case spv::OpFunction:
       result = interpreter->HandleFunction(parsed_instruction);
@@ -133,6 +152,9 @@ spv_result_t parse_instruction(
       break;
     case spv::OpCompositeConstruct:
       result = interpreter->HandleCompositeConstruct(parsed_instruction);
+      break;
+    case spv::OpLoad:
+      result = interpreter->HandleLoad(parsed_instruction);
       break;
     case spv::OpFNegate:
       result = interpreter->HandleFNegate(parsed_instruction);
@@ -232,13 +254,13 @@ std::string TranspilerImpl::ResolveName(uint32_t id) {
 }
 
 std::string TranspilerImpl::ResolveType(uint32_t id) {
-  if (id == float_type_) {
+  if (id == float_type_ || id == float_uniform_type_) {
     return "float";
-  } else if (id == vec2_type_) {
+  } else if (id == vec2_type_ || id == vec2_uniform_type_) {
     return "float2";
-  } else if (id == vec3_type_) {
+  } else if (id == vec3_type_ || id == vec3_uniform_type_) {
     return "float3";
-  } else if (id == vec4_type_) {
+  } else if (id == vec4_type_ || id == vec4_uniform_type_) {
     return "float4";
   }
   return "";
@@ -383,6 +405,35 @@ spv_result_t TranspilerImpl::HandleTypeVector(
   return SPV_SUCCESS;
 }
 
+spv_result_t TranspilerImpl::HandleTypePointer(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kStorageClassIndex = 1;
+  static constexpr int kTypeIndex = 2;
+  uint32_t type = get_operand(inst, kTypeIndex);
+  uint32_t storage_class = get_operand(inst, kStorageClassIndex);
+
+  if (storage_class != spv::StorageClassUniform) {
+    last_error_msg_ =
+        "OpTypePointer: Only storage class 'Uniform' is supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (type == float_type_) {
+    float_uniform_type_ = inst->result_id;
+  } else if (type == vec2_type_) {
+    vec2_uniform_type_ = inst->result_id;
+  } else if (type == vec3_type_) {
+    vec3_uniform_type_ = inst->result_id;
+  } else if (type == vec4_type_) {
+    vec4_uniform_type_ = inst->result_id;
+  } else {
+    last_error_msg_ = "OpTypePointer: Must be a supported SSIR type.";
+    return SPV_UNSUPPORTED;
+  }
+
+  return SPV_SUCCESS;
+}
+
 spv_result_t TranspilerImpl::HandleTypeFunction(
     const spv_parsed_instruction_t* inst) {
   if (main_function_type_ != 0) {
@@ -449,6 +500,29 @@ spv_result_t TranspilerImpl::HandleConstantComposite(
   }
 
   sksl_ << ");\n";
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleVariable(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kStorageClassIndex = 2;
+
+  if (get_operand(inst, kStorageClassIndex) != spv::StorageClassUniform) {
+    last_error_msg_ = "OpVariable: Must use storage class 'Uniform'";
+    return SPV_UNSUPPORTED;
+  }
+
+  if (inst->type_id == 0 || (inst->type_id != float_uniform_type_ &&
+                             inst->type_id != vec2_uniform_type_ &&
+                             inst->type_id != vec3_uniform_type_ &&
+                             inst->type_id != vec4_uniform_type_)) {
+    last_error_msg_ = "OpVariable: Must use SSIR-valid type.";
+    return SPV_UNSUPPORTED;
+  }
+
+  sksl_ << "uniform " << ResolveType(inst->type_id) << " "
+        << ResolveName(inst->result_id) << ";\n";
 
   return SPV_SUCCESS;
 }
@@ -525,6 +599,18 @@ spv_result_t TranspilerImpl::HandleReturnValue(
   }
   return_ = get_operand(inst, kReturnIdIndex);
   sksl_ << "  return half4(" << ResolveName(return_) << ");\n";
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleLoad(const spv_parsed_instruction_t* inst) {
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+  static constexpr int kPointerIndex = 2;
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id) << " = "
+        << ResolveName(get_operand(inst, kPointerIndex)) << ";\n";
   return SPV_SUCCESS;
 }
 

@@ -11,8 +11,8 @@ class Vec3 extends Expression {
   /// Construct a constant Vec3 with value [x, x].
   Vec3.all(double x) : super._(OpConstantComposite.vec3(x, x, x));
 
-  /// Construct Vec4 from existing expressions. The total number
-  /// of elements in the expressions in [components] must be 4.
+  /// Construct Vec3 from existing expressions. The total number
+  /// of elements in the expressions in [components] must be 3.
   Vec3.of(List<Expression> components)
       : super._(
             OpCompositeConstruct.vec3(components.map((c) => c._node).toList()));

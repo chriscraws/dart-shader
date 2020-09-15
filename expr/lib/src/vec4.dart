@@ -9,6 +9,10 @@ mixin Vec4OrScalar on Expression {
 class Vec4 extends Expression with Vec4OrScalar {
   const Vec4._(Evaluable child) : super._(child);
 
+  Vec4 _construct(Evaluable node) {
+    return Vec4._(node);
+  }
+
   /// Construct a constant Vec4 with value [x, y, z, w].
   Vec4(double x, double y, double z, double w)
       : super._(OpConstantComposite.vec4(x, y, z, w));
@@ -170,4 +174,6 @@ class Vec4 extends Expression with Vec4OrScalar {
   Scalar get g => y;
   Scalar get b => z;
   Scalar get a => w;
+
+  Vec2 get xy => Vec2._(OpVectorShuffle(this._node, [0, 1]));
 }

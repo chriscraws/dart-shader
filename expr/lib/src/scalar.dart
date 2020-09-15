@@ -4,6 +4,10 @@ part of '../expr.dart';
 class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   Scalar._(Evaluable child) : super._(child);
 
+  Scalar _construct(Evaluable node) {
+    return Scalar._(node);
+  }
+
   /// Constructs a constant Scalar with value [x].
   Scalar(double x) : super._(OpConstant(x));
 
@@ -106,13 +110,13 @@ class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
 
   /// Mix linearly interpolates between [a] and [b] as this value ranges from 0
   /// to 1.
-  Scalar mix(Scalar a, Scalar b) =>
-      Scalar._(FMix(a._node, b._node, this._node));
+  T mix<T extends Expression>(T a, T b) =>
+      a._construct(FMix(a._node, b._node, this._node));
 
   /// Performs smooth Hermite interpolation between 0 and 1 as this value ranges
   /// from [a] to [b].
-  Scalar smoothStep(Scalar a, Scalar b) =>
-      Scalar._(SmoothStep(a._node, b._node, this._node));
+  T smoothStep<T extends Expression>(T a, T b) =>
+      a._construct(SmoothStep(a._node, b._node, this._node));
 
   double evaluate() => _node.evaluate()[0];
 

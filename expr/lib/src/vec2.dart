@@ -9,6 +9,10 @@ mixin Vec2OrScalar on Expression {
 class Vec2 extends Expression with Vec2OrScalar {
   const Vec2._(Evaluable child) : super._(child);
 
+  Vec2 _construct(Evaluable node) {
+    return Vec2._(node);
+  }
+
   /// Construct a constant Vec2 with value [x, y].
   Vec2(double x, double y) : super._(OpConstantComposite.vec2(x, y));
 

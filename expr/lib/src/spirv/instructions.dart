@@ -489,10 +489,8 @@ class OpVectorShuffle extends Instruction with Evaluable {
   final List<int> indices;
   final List<Instruction> deps;
 
-  OpVectorShuffle({
-    this.source,
-    this.indices,
-  })  : assert(source.type != floatT),
+  OpVectorShuffle(this.source, this.indices)
+      : assert(source.type != floatT),
         assert(indices != null),
         assert(indices.length > 0),
         assert(indices.length <= 4),

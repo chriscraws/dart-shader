@@ -9,6 +9,10 @@ mixin Vec3OrScalar on Expression {
 class Vec3 extends Expression with Vec3OrScalar {
   const Vec3._(Evaluable child) : super._(child);
 
+  Vec3 _construct(Evaluable node) {
+    return Vec3._(node);
+  }
+
   /// Construct a constant Vec3 with value [x, y].
   Vec3(double x, double y, double z)
       : super._(OpConstantComposite.vec3(x, y, z));

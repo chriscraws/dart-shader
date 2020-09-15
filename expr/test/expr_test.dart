@@ -20,11 +20,17 @@ Future<void> matchGolden(ByteBuffer item, String filename) async {
   expect(item.asUint8List(), equals(await file.readAsBytes()));
 }
 
+class ColorShader extends Shader {
+  final Vec4 out;
+
+  ColorShader(this.out);
+
+  Vec4 color(Vec2 position) => out;
+}
+
 void main() {
   test('simple shader', () async {
-    final shader = Shader(
-      color: Vec4(0, 0.25, 0.75, 1.0),
-    );
+    final shader = ColorShader(Vec4(0, 0.25, 0.75, 1.0));
     await matchGolden(shader.toSPIRV(), 'simple.golden');
   });
 
@@ -37,7 +43,7 @@ void main() {
 
     final color = Vec4.of([scalar, scalar, scalar, scalar]) * c;
 
-    final shader = Shader(color: color);
+    final shader = ColorShader(color);
     await matchGolden(shader.toSPIRV(), 'scalar.golden');
 
     final result = (scalar * c).evaluate();
@@ -54,7 +60,7 @@ void main() {
 
     final color = Vec4.of([vec2, vec2]);
 
-    final shader = Shader(color: color);
+    final shader = ColorShader(color);
     await matchGolden(shader.toSPIRV(), 'vec2op.golden');
 
     final result = vec2.evaluate();
@@ -71,7 +77,7 @@ void main() {
 
     final color = Vec4.of([vec3, Scalar(1.0)]);
 
-    final shader = Shader(color: color);
+    final shader = ColorShader(color);
     await matchGolden(shader.toSPIRV(), 'vec3op.golden');
 
     final result = vec3.evaluate();
@@ -87,7 +93,7 @@ void main() {
     final color =
         ((b * Scalar(2) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5)) * c;
 
-    final shader = Shader(color: color);
+    final shader = ColorShader(color);
     await matchGolden(shader.toSPIRV(), 'vec4op.golden');
 
     final result = color.evaluate();
@@ -128,7 +134,7 @@ void main() {
         .tan()
         .truncate();
 
-    final shader = Shader(color: Vec4.of([out, Scalar(1)]));
+    final shader = ColorShader(Vec4.of([out, Scalar(1)]));
     await matchGolden(shader.toSPIRV(), 'glslop.golden');
   });
 }

@@ -9,7 +9,6 @@ import 'instructions.dart';
 final _magicNumber = 0x07230203;
 final _version = 0x00010500;
 
-final _position = OpFunctionParameter(vec2T);
 final _mainType = OpTypeFunction(
   returnType: vec4T,
   paramTypes: [vec2T],
@@ -18,6 +17,9 @@ final _mainType = OpTypeFunction(
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
 class Module extends Identifier {
+  // fragment position
+  static final position = OpFunctionParameter(vec2T);
+
   final _ids = <Instruction, int>{};
   final _constants = <Instruction>{};
 
@@ -103,7 +105,7 @@ class Module extends Identifier {
     // add function declaration opening
     instructions.addAll([
       main,
-      _position,
+      position,
       OpLabel(),
     ]);
 

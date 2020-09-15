@@ -202,13 +202,15 @@ class OpFunctionEnd extends Instruction {
         );
 }
 
-class OpFunctionParameter extends Instruction {
+class OpFunctionParameter extends Instruction with Evaluable {
   const OpFunctionParameter(Type type)
       : super(
           type: type,
           opCode: 55,
           result: true,
         );
+
+  List<double> evaluate() => List<double>(type.elementCount);
 }
 
 class OpLabel extends Instruction {

@@ -7,7 +7,7 @@ mixin Vec3OrScalar on Expression {
 
 /// Vector [Expression] with three components.
 class Vec3 extends Expression with Vec3OrScalar {
-  Vec3._(Evaluable child) : super._(child);
+  const Vec3._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec3 with value [x, y].
   Vec3(double x, double y, double z)
@@ -160,4 +160,12 @@ class Vec3 extends Expression with Vec3OrScalar {
   vm.Vector3 evaluate() => vm.Vector3.array(_node.evaluate());
 
   bool get _isVec3 => true;
+
+  Scalar get x => Scalar._(OpCompositeExtract.vec(this._node, 0));
+  Scalar get y => Scalar._(OpCompositeExtract.vec(this._node, 1));
+  Scalar get z => Scalar._(OpCompositeExtract.vec(this._node, 2));
+
+  Scalar get r => x;
+  Scalar get g => y;
+  Scalar get b => z;
 }

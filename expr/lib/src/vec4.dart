@@ -7,7 +7,7 @@ mixin Vec4OrScalar on Expression {
 
 /// Vector [Expression] with four components.
 class Vec4 extends Expression with Vec4OrScalar {
-  Vec4._(Evaluable child) : super._(child);
+  const Vec4._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec4 with value [x, y, z, w].
   Vec4(double x, double y, double z, double w)
@@ -160,4 +160,14 @@ class Vec4 extends Expression with Vec4OrScalar {
   vm.Vector4 evaluate() => vm.Vector4.array(_node.evaluate());
 
   bool get _isVec4 => true;
+
+  Scalar get x => Scalar._(OpCompositeExtract.vec(this._node, 0));
+  Scalar get y => Scalar._(OpCompositeExtract.vec(this._node, 1));
+  Scalar get z => Scalar._(OpCompositeExtract.vec(this._node, 2));
+  Scalar get w => Scalar._(OpCompositeExtract.vec(this._node, 3));
+
+  Scalar get r => x;
+  Scalar get g => y;
+  Scalar get b => z;
+  Scalar get a => w;
 }

@@ -459,6 +459,31 @@ Type _resolveVecType(int elCount) {
   return vec4T;
 }
 
+class OpCompositeExtract extends Instruction with Evaluable {
+  final Evaluable source;
+  final List<int> indices;
+
+  OpCompositeExtract.vec(this.source, int index)
+      : assert(source != null),
+        assert(index != null),
+        indices = [index],
+        super(
+          opCode: 81,
+          result: true,
+          type: floatT,
+        );
+
+  List<int> operands(Identifier i) => [
+        i.identify(source),
+        ...indices,
+      ];
+
+  List<double> evaluate() {
+    assert(indices.length == 1);
+    return [source.evaluate()[indices[0]]];
+  }
+}
+
 class OpVectorShuffle extends Instruction with Evaluable {
   final Evaluable source;
   final List<int> indices;

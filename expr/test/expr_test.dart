@@ -65,6 +65,8 @@ void main() {
 
     final result = vec2.evaluate();
     expect(result, equals(vm.Vector2(6, 7)));
+    expect(vec2.x.evaluate(), equals(6));
+    expect(vec2.y.evaluate(), equals(7));
     expect(vec2.dot(b).evaluate(), equals(13));
   });
 
@@ -82,6 +84,9 @@ void main() {
 
     final result = vec3.evaluate();
     expect(result, equals(vm.Vector3(6, 7, 8)));
+    expect(vec3.x.evaluate(), equals(6));
+    expect(vec3.y.evaluate(), equals(7));
+    expect(vec3.z.evaluate(), equals(8));
     expect(vec3.dot(b).evaluate(), equals(21));
   });
 
@@ -98,6 +103,10 @@ void main() {
 
     final result = color.evaluate();
     expect(result, equals(vm.Vector4(2, 3, 4, 5)));
+    expect(color.x.evaluate(), equals(2));
+    expect(color.y.evaluate(), equals(3));
+    expect(color.z.evaluate(), equals(4));
+    expect(color.w.evaluate(), equals(5));
     expect(color.dot(b).evaluate(), equals(14));
   });
 

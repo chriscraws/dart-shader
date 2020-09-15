@@ -7,7 +7,7 @@ mixin Vec2OrScalar on Expression {
 
 /// Vector [Expression] with two components.
 class Vec2 extends Expression with Vec2OrScalar {
-  Vec2._(Evaluable child) : super._(child);
+  const Vec2._(Evaluable child) : super._(child);
 
   /// Construct a constant Vec2 with value [x, y].
   Vec2(double x, double y) : super._(OpConstantComposite.vec2(x, y));
@@ -157,4 +157,10 @@ class Vec2 extends Expression with Vec2OrScalar {
   vm.Vector2 evaluate() => vm.Vector2.array(_node.evaluate());
 
   bool get _isVec2 => true;
+
+  Scalar get x => Scalar._(OpCompositeExtract.vec(this._node, 0));
+  Scalar get y => Scalar._(OpCompositeExtract.vec(this._node, 1));
+
+  Scalar get r => x;
+  Scalar get g => y;
 }

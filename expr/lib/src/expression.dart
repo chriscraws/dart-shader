@@ -4,5 +4,5 @@ part of '../expr.dart';
 /// evaluated at runtime and can be compiled to SPIR-V.
 abstract class Expression {
   final Evaluable _node;
-  Expression._(this._node);
+  const Expression._(this._node);
 }

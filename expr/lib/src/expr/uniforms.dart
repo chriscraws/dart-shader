@@ -1,4 +1,4 @@
-part of '../expr.dart';
+part of '../../expr.dart';
 
 /// [Scalar] that can be modified at runtime.
 class ScalarUniform extends Scalar {

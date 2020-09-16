@@ -1,4 +1,4 @@
-part of '../expr.dart';
+part of '../../expr.dart';
 
 /// Shader can be used to construct a spir-v module
 /// compatible with Flutter.

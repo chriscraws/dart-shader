@@ -1,4 +1,4 @@
-part of '../expr.dart';
+part of '../../expr.dart';
 
 /// Abstract base class for mathematical expressions that can be
 /// evaluated at runtime and can be compiled to SPIR-V.

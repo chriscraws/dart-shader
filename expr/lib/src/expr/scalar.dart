@@ -1,4 +1,4 @@
-part of '../expr.dart';
+part of '../../expr.dart';
 
 /// Floating-point [Expression].
 class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {

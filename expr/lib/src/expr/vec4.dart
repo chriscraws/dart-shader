@@ -1,4 +1,4 @@
-part of '../expr.dart';
+part of '../../expr.dart';
 
 // Both [Scalar] and [Vec4] implement this mixin.
 mixin Vec4OrScalar on Expression {

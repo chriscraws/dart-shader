@@ -176,7 +176,7 @@ class Vec3 extends Expression with Vec3OrScalar {
   Scalar get z => Scalar._(OpCompositeExtract.vec(this._node, 2));
 
   Vec2 _vec2Swizzle(int x, int y) =>
-    Vec2._(OpVectorShuffle(this._node, [x, y]));
+      Vec2._(OpVectorShuffle(this._node, [x, y]));
 
   Vec2 get xx => _vec2Swizzle(0, 0);
   Vec2 get xy => _vec2Swizzle(0, 1);
@@ -189,7 +189,7 @@ class Vec3 extends Expression with Vec3OrScalar {
   Vec2 get zz => _vec2Swizzle(2, 2);
 
   Vec3 _vec3Swizzle(int x, int y, int z) =>
-    Vec3._(OpVectorShuffle(this._node, [x, y, z]));
+      Vec3._(OpVectorShuffle(this._node, [x, y, z]));
 
   Vec3 get xxx => _vec3Swizzle(0, 0, 0);
   Vec3 get xxy => _vec3Swizzle(0, 0, 1);
@@ -220,7 +220,7 @@ class Vec3 extends Expression with Vec3OrScalar {
   Vec3 get zzz => _vec3Swizzle(2, 2, 2);
 
   Vec4 _vec4Swizzle(int x, int y, int z, int w) =>
-    Vec4._(OpVectorShuffle(this._node, [x, y, z, w]));
+      Vec4._(OpVectorShuffle(this._node, [x, y, z, w]));
 
   Vec4 get xxxx => _vec4Swizzle(0, 0, 0, 0);
   Vec4 get xxxy => _vec4Swizzle(0, 0, 0, 1);

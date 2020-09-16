@@ -1,6 +1,8 @@
 // This file defines the SPIR-V Instruction class and an
 // interface for keeping track of Instruction IDs.
 
+import 'dart:typed_data';
+
 /// Identifier is used to assign ids to Instructions.
 abstract class Identifier {
   /// Assign an ID to an Instruction, and return it. If
@@ -46,7 +48,7 @@ abstract class Instruction {
 
   // Null if not a variable, otherwise the variable value.
   // Must have length equal to [type.elementCount].
-  List<double> get variable => null;
+  Float32List get variable => null;
 
   const Instruction({
     this.opCode,

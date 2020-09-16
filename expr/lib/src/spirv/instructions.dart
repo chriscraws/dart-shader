@@ -299,12 +299,12 @@ class OpConstantComposite extends Instruction with Evaluable {
 
 class OpVariable extends Instruction {
   final Type objectType;
-  final List<double> variable;
+  final Float32List variable;
 
   OpVariable._(OpTypePointer type)
       : assert(type != null),
         objectType = type.objectType,
-        variable = List<double>(type.objectType.elementCount),
+        variable = Float32List(type.objectType.elementCount),
         super(
           isDeclaration: true,
           opCode: 59,
@@ -341,7 +341,7 @@ class OpLoad extends Instruction with Evaluable {
 
   List<double> get value => pointer.variable;
 
-  List<double> get variable => pointer.variable;
+  Float32List get variable => pointer.variable;
 }
 
 // Numerical operation with one arguments.

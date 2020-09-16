@@ -19,8 +19,7 @@ class Vec2Uniform extends Vec2 {
 
   /// Current value of the uniform. Returned by [evaluate], and
   /// bound to shaders using this uniform each frame.
-  vm.Vector2 get value =>
-      vm.Vector2.fromFloat32List(Float32List.fromList(_node.variable));
+  vm.Vector2 get value => vm.Vector2.fromFloat32List(_node.variable);
 
   /// Set the current value of the uniform. Will be returned by
   /// [evaluate] and bound to shaders that use this uniform.
@@ -36,8 +35,7 @@ class Vec3Uniform extends Vec3 {
 
   /// Current value of the uniform. Returned by [evaluate], and
   /// bound to shaders using this uniform each frame.
-  vm.Vector3 get value =>
-      vm.Vector3.fromFloat32List(Float32List.fromList(_node.variable));
+  vm.Vector3 get value => vm.Vector3.fromFloat32List(_node.variable);
 
   /// Set the current value of the uniform. Will be returned by
   /// [evaluate] and bound to shaders that use this uniform.
@@ -54,8 +52,7 @@ class Vec4Uniform extends Vec4 {
 
   /// Current value of the uniform. Returned by [evaluate], and
   /// bound to shaders using this uniform each frame.
-  vm.Vector4 get value =>
-      vm.Vector4.fromFloat32List(Float32List.fromList(_node.variable));
+  vm.Vector4 get value => vm.Vector4.fromFloat32List(_node.variable);
 
   /// Set the current value of the uniform. Will be returned by
   /// [evaluate] and bound to shaders that use this uniform.

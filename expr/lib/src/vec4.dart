@@ -72,6 +72,9 @@ class Vec4 extends Expression with Vec4OrScalar {
   /// Length.
   Scalar length() => Scalar._(Length(this._node));
 
+  /// Distance to [other].
+  Scalar distanceTo(Vec4 other) => Scalar._(Distance(this._node, other._node));
+
   /// Dot product.
   Scalar dot(Vec4 b) => Scalar._(OpFDot(this._node, b._node));
 

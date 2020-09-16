@@ -177,4 +177,22 @@ void main() {
     final shader = ColorShader(Vec4.of([out, Scalar(1)]));
     await matchGolden(shader.toSPIRV(), 'glslop.golden');
   });
+
+  test('distanceTo vec2', () {
+    final result = Vec2.all(0).distanceTo(Vec2.all(5)).evaluate();
+    final expected = vm.Vector2.all(0).distanceTo(vm.Vector2.all(5));
+    expect(result, equals(expected));
+  });
+
+  test('distanceTo vec3', () {
+    final result = Vec3.all(0).distanceTo(Vec3.all(5)).evaluate();
+    final expected = vm.Vector3.all(0).distanceTo(vm.Vector3.all(5));
+    expect(result, equals(expected));
+  });
+
+  test('distanceTo vec4', () {
+    final result = Vec4.all(0).distanceTo(Vec4.all(5)).evaluate();
+    final expected = vm.Vector4.all(0).distanceTo(vm.Vector4.all(5));
+    expect(result, equals(expected));
+  });
 }

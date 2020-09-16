@@ -183,7 +183,7 @@ class Length extends OpExtInst {
   void evaluate() {
     final a = deps[0];
     a.evaluate();
-    value[0] = _calculateLength(a.value);
+    value[0] = _calculateLength(a.value, a.value.length);
   }
 }
 
@@ -193,7 +193,7 @@ class Normalize extends OpExtInst {
   void evaluate() {
     final a = deps[0];
     a.evaluate();
-    final len = _calculateLength(a.value);
+    final len = _calculateLength(a.value, a.value.length);
     for (int i = 0; i < value.length; i++) {
       value[i] = a.value[i] / len;
     }
@@ -282,12 +282,17 @@ class SmoothStep extends _TerOp {
 class Distance extends OpExtInst {
   Distance(Evaluable a, Evaluable b) : super(_distance, [a, b], floatT);
 
+  // prevents allocation inside evaluate, should be as large
+  // as the largest numerical type.
+  static final _diff = List<double>(vec4T.elementCount);
+
   void evaluate() {
     final a = deps[0]..evaluate();
     final b = deps[1]..evaluate();
-    for (int i = 0; i < value.length; i++) {
-      value[i] = b.value[i] - a.value[i];
+    for (int i = 0; i < a.value.length; i++) {
+      _diff[i] = b.value[i] - a.value[i];
     }
+    value[0] = _calculateLength(_diff, a.value.length);
   }
 }
 
@@ -322,9 +327,9 @@ class Reflect extends OpExtInst {
   }
 }
 
-double _calculateLength(List<double> vector) {
+double _calculateLength(List<double> vector, int count) {
   double sum = 0;
-  for (int i = 0; i < vector.length; i++) {
+  for (int i = 0; i < count; i++) {
     final el = vector[i];
     sum += el * el;
   }

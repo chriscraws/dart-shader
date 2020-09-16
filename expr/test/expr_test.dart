@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:expr/src/spirv/instructions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:expr/expr.dart';
 import 'package:image/image.dart';
@@ -37,7 +36,7 @@ class TestShader extends Shader {
   final foreground = Vec4Uniform();
 
   Vec4 color(Vec2 position) {
-    final uv = position / resolution;
+    final uv = (position / resolution - Vec2.all(0.5)) * Scalar(2);
 
     final ax = sin(Scalar(5.0) * uv.x + time);
     final ay = sin(uv.y + Scalar(0.2) * time);
@@ -64,37 +63,6 @@ void main() {
   test('test shader', () async {
     final shader = TestShader();
     await matchGolden(shader.toSPIRV(), 'test_shader.golden');
-
-    // final width = 100;
-    // final height = 100;
-
-    // shader.time.value = 10;
-    // shader.background.value = vm.Vector3(0, 1, 0);
-    // shader.foreground.value = vm.Vector4(1, 0, 0, 1);
-    // shader.resolution.value = vm.Vector2(width.toDouble(), height.toDouble());
-
-    // final animate = Animation();
-
-    // for (double t = 0; t < 20; t+= 0.5) {
-    //   final img = Image(width, height);
-    //   shader.time.value = t;
-    //   for (int i = 0; i < width; i++) {
-    //     for (int j = 0; j < height; j++) {
-    //       final result = shader.evaluate(vm.Vector2(i.toDouble(), j.toDouble()));
-    //       img.setPixelRgba(
-    //         i, j,
-    //         (result.r * 0xff).toInt(),
-    //         (result.g * 0xff).toInt(),
-    //         (result.b * 0xff).toInt(),
-    //         (result.a * 0xff).toInt(),
-    //       );
-    //     }
-    //   }
-    //   animate.addFrame(img);
-    // }
-    // File('output.gif')..writeAsBytesSync(encodeGifAnimation(animate,
-    //   samplingFactor: 60,
-    // ));
   });
 
   test('scalar ops', () async {

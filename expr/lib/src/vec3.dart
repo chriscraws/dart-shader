@@ -161,7 +161,10 @@ class Vec3 extends Expression with Vec3OrScalar {
   /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec3 reflect(Vec3 normal) => Vec3._(Reflect(this._node, normal._node));
 
-  vm.Vector3 evaluate() => vm.Vector3.array(_node.evaluate());
+  vm.Vector3 evaluate() {
+    _node.evaluate();
+    return vm.Vector3.array(_node.value);
+  }
 
   bool get _isVec3 => true;
 

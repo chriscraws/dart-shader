@@ -118,7 +118,10 @@ class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   T smoothStep<T extends Expression>(T a, T b) =>
       a._construct(SmoothStep(a._node, b._node, this._node));
 
-  double evaluate() => _node.evaluate()[0];
+  double evaluate() {
+    _node.evaluate();
+    return _node.value[0];
+  }
 
   bool get _isVec4 => false;
   bool get _isVec3 => false;

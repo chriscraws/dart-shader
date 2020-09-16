@@ -133,8 +133,6 @@ class OpTypeVec extends Instruction with Type {
         i.identify(componentType),
         elementCount,
       ];
-
-  List<Instruction> get deps => [componentType];
 }
 
 class OpTypePointer extends Instruction with Type {
@@ -152,8 +150,6 @@ class OpTypePointer extends Instruction with Type {
         _storageClassUniform,
         i.identify(objectType),
       ];
-
-  List<Instruction> get deps => [objectType];
 }
 
 class OpTypeFunction extends Instruction {
@@ -174,8 +170,6 @@ class OpTypeFunction extends Instruction {
         i.identify(returnType),
         ...paramTypes.map((t) => i.identify(t)),
       ];
-
-  List<Instruction> get deps => [returnType];
 }
 
 class OpFunction extends Instruction {
@@ -191,8 +185,6 @@ class OpFunction extends Instruction {
         0, // no function control
         i.identify(fnType), // function type
       ];
-
-  List<Instruction> get deps => [fnType];
 }
 
 class OpFunctionEnd extends Instruction {
@@ -203,14 +195,19 @@ class OpFunctionEnd extends Instruction {
 }
 
 class OpFunctionParameter extends Instruction with Evaluable {
-  const OpFunctionParameter(Type type)
+  OpFunctionParameter(Type type)
       : super(
           type: type,
           opCode: 55,
           result: true,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
-  List<double> evaluate() => List<double>(type.elementCount);
+  void evaluate() {}
 }
 
 class OpLabel extends Instruction {
@@ -223,15 +220,16 @@ class OpLabel extends Instruction {
 
 class OpReturnValue extends Instruction {
   final Instruction value;
+  final List<Instruction> deps;
 
-  const OpReturnValue(this.value)
-      : super(
+  OpReturnValue(this.value)
+      : assert(value != null),
+        deps = [value],
+        super(
           opCode: 254,
         );
 
   List<int> operands(Identifier i) => [i.identify(value)];
-
-  List<Instruction> get deps => [value];
 }
 
 class OpConstant extends Instruction with Evaluable {
@@ -242,16 +240,20 @@ class OpConstant extends Instruction with Evaluable {
           opCode: 43,
           result: true,
           type: floatT,
-        );
+        ) {
+    this.value.add(constant);
+  }
 
   List<int> operands(Identifier i) =>
       Float32List.fromList([constant]).buffer.asInt32List();
 
-  List<double> evaluate() => [constant];
+  void evaluate() {}
 }
 
 class OpConstantComposite extends Instruction with Evaluable {
   final List<OpConstant> constituants;
+
+  List<Evaluable> _deps;
 
   OpConstantComposite._(Type type, List<double> constituants)
       : assert(constituants != null),
@@ -263,7 +265,13 @@ class OpConstantComposite extends Instruction with Evaluable {
           opCode: 44,
           type: type,
           result: true,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+    _deps = List<Evaluable>.from(this.constituants);
+  }
 
   OpConstantComposite.vec2(double x, double y) : this._(vec2T, [x, y]);
 
@@ -276,17 +284,21 @@ class OpConstantComposite extends Instruction with Evaluable {
   List<int> operands(Identifier i) =>
       constituants.map((op) => i.identify(op)).toList();
 
-  List<Instruction> get deps => List<Instruction>.from(constituants);
+  List<Evaluable> get deps => _deps;
 
-  List<double> evaluate() => constituants.fold([], (out, child) {
-        out.addAll(child.evaluate());
-        return out;
-      });
+  void evaluate() {
+    int i = 0;
+    for (int index = 0; index < constituants.length; index++) {
+      final c = constituants[index]..evaluate();
+      for (int ci = 0; ci < c.value.length; ci++) {
+        value[i++] = c.value[ci];
+      }
+    }
+  }
 }
 
 class OpVariable extends Instruction {
   final Type objectType;
-
   final List<double> variable;
 
   OpVariable._(OpTypePointer type)
@@ -307,14 +319,16 @@ class OpVariable extends Instruction {
 
   List<int> operands(Identifier i) => [_storageClassUniform];
 
-  List<Instruction> get deps => [type];
+  void evaluate() {}
 }
 
 class OpLoad extends Instruction with Evaluable {
   final OpVariable pointer;
+  final List<Instruction> deps;
 
   OpLoad(this.pointer)
       : assert(pointer != null),
+        deps = [pointer],
         super(
           opCode: 61,
           result: true,
@@ -322,9 +336,10 @@ class OpLoad extends Instruction with Evaluable {
         );
 
   List<int> operands(Identifier i) => [i.identify(pointer)];
-  List<Instruction> get deps => [pointer];
 
-  List<double> evaluate() => pointer.variable.toList();
+  void evaluate() {}
+
+  List<double> get value => pointer.variable;
 
   List<double> get variable => pointer.variable;
 }
@@ -332,20 +347,30 @@ class OpLoad extends Instruction with Evaluable {
 // Numerical operation with one arguments.
 class OpFNegate extends Instruction with Evaluable {
   final Evaluable a;
+  final List<Evaluable> deps;
 
   OpFNegate(this.a)
       : assert(a != null),
+        deps = [a],
         super(
           type: a.type,
           result: true,
           opCode: 127,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => [i.identify(a)];
 
-  List<Instruction> get deps => [a];
-
-  List<double> evaluate() => a.evaluate().map((x) => -x).toList();
+  void evaluate() {
+    a.evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = -a.value[i];
+    }
+  }
 }
 
 // Numerical operation with two arguments.
@@ -359,20 +384,23 @@ abstract class _BinOp extends Instruction with Evaluable {
           type: a.type,
           result: true,
           opCode: opCode,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
-  List<Instruction> get deps => [a, b];
+  List<Evaluable> get deps => [a, b];
 
-  List<double> evaluate() {
-    final valueA = a.evaluate();
-    final valueB = b.evaluate();
-    final out = List<double>(valueA.length);
-    for (int i = 0; i < out.length; i++) {
-      out[i] = _op(valueA[i], valueB[i]);
+  void evaluate() {
+    a.evaluate();
+    b.evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = _op(a.value[i], b.value[i]);
     }
-    return out;
   }
 
   double _op(double x, double y);
@@ -412,39 +440,58 @@ class OpFDot extends Instruction with Evaluable {
   final Evaluable a;
   final Evaluable b;
 
+  final List<Evaluable> deps;
+
   OpFDot(this.a, this.b)
       : assert(a.type == b.type),
+        deps = [a, b],
         super(
           type: floatT,
           result: true,
           opCode: 148,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
-  List<Instruction> get deps => [a, b];
-
-  List<double> evaluate() => [_dot(a.evaluate(), b.evaluate())];
+  void evaluate() {
+    a.evaluate();
+    b.evaluate();
+    value[0] = _dot(a.value, b.value);
+  }
 }
 
 class OpVectorTimesScalar extends Instruction with Evaluable {
   final Evaluable a;
   final Evaluable b;
+  final List<Evaluable> deps;
 
   OpVectorTimesScalar(this.a, this.b)
       : assert(a.type != floatT),
         assert(b.type == floatT),
+        deps = [a, b],
         super(
           type: a.type,
           result: true,
           opCode: 142,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => deps.map((d) => i.identify(d)).toList();
 
-  List<Instruction> get deps => [a, b];
-
-  List<double> evaluate() {
-    final bVal = b.evaluate()[0];
-    return a.evaluate().map((a) => a * bVal).toList();
+  void evaluate() {
+    a.evaluate();
+    b.evaluate();
+    final bVal = b.value[0];
+    for (int i = 0; i < value.length; i++) {
+      value[i] = a.value[i] * bVal;
+    }
   }
 }
 
@@ -461,33 +508,41 @@ Type _resolveVecType(int elCount) {
 
 class OpCompositeExtract extends Instruction with Evaluable {
   final Evaluable source;
+  final List<Evaluable> deps;
   final List<int> indices;
 
   OpCompositeExtract.vec(this.source, int index)
       : assert(source != null),
         assert(index != null),
+        deps = [source],
         indices = [index],
         super(
           opCode: 81,
           result: true,
           type: floatT,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => [
         i.identify(source),
         ...indices,
       ];
 
-  List<double> evaluate() {
+  void evaluate() {
     assert(indices.length == 1);
-    return [source.evaluate()[indices[0]]];
+    source.evaluate();
+    value[0] = source.value[indices[0]];
   }
 }
 
 class OpVectorShuffle extends Instruction with Evaluable {
   final Evaluable source;
   final List<int> indices;
-  final List<Instruction> deps;
+  final List<Evaluable> deps;
 
   OpVectorShuffle(this.source, this.indices)
       : assert(source.type != floatT),
@@ -499,7 +554,12 @@ class OpVectorShuffle extends Instruction with Evaluable {
           opCode: 79,
           result: true,
           type: _resolveVecType(indices.length),
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => [
         i.identify(source),
@@ -507,13 +567,11 @@ class OpVectorShuffle extends Instruction with Evaluable {
         ...indices,
       ];
 
-  List<double> evaluate() {
-    final result = source.evaluate();
-    final out = List<double>(indices.length);
+  void evaluate() {
+    source.evaluate();
     for (int i = 0; i < indices.length; i++) {
-      out[i] = result[indices[i]];
+      value[i] = source.value[indices[i]];
     }
-    return out;
   }
 }
 
@@ -532,7 +590,12 @@ class OpCompositeConstruct extends Instruction with Evaluable {
           type: type,
           result: true,
           opCode: 80,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   OpCompositeConstruct.vec2(List<Evaluable> children) : this._(vec2T, children);
   OpCompositeConstruct.vec3(List<Evaluable> children) : this._(vec3T, children);
@@ -540,10 +603,16 @@ class OpCompositeConstruct extends Instruction with Evaluable {
 
   List<int> operands(Identifier i) => deps.map(i.identify).toList();
 
-  List<double> evaluate() => deps.fold([], (out, child) {
-        out.addAll(child.evaluate());
-        return out;
-      });
+  void evaluate() {
+    int i = 0;
+    for (int d = 0; d < deps.length; d++) {
+      final dep = deps[d];
+      dep.evaluate();
+      for (int di = 0; di < dep.value.length; di++) {
+        value[i++] = dep.value[di];
+      }
+    }
+  }
 }
 
 abstract class OpExtInst extends Instruction with Evaluable {
@@ -557,7 +626,12 @@ abstract class OpExtInst extends Instruction with Evaluable {
           opCode: 12,
           type: type == null ? deps[0].type : type,
           result: true,
-        );
+        ) {
+    value.addAll(Iterable.generate(
+      this.type.elementCount,
+      (_) => 0,
+    ));
+  }
 
   List<int> operands(Identifier i) => [
         i.identify(OpExtInstImport.glsl),

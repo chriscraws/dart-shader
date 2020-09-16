@@ -161,7 +161,10 @@ class Vec4 extends Expression with Vec4OrScalar {
   /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec4 reflect(Vec4 normal) => Vec4._(Reflect(this._node, normal._node));
 
-  vm.Vector4 evaluate() => vm.Vector4.array(_node.evaluate());
+  vm.Vector4 evaluate() {
+    _node.evaluate();
+    return vm.Vector4.array(_node.value);
+  }
 
   bool get _isVec4 => true;
 

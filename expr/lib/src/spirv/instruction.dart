@@ -15,7 +15,8 @@ mixin Type on Instruction {
 
 /// Instructions that can evaluate to a value.
 mixin Evaluable on Instruction {
-  List<double> evaluate();
+  final List<double> value = <double>[];
+  void evaluate();
 }
 
 /// Instructions are the next level of semantics in SPIR-V,

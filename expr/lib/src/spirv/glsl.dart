@@ -46,7 +46,13 @@ final _reflect = 71;
 abstract class _UniOp extends OpExtInst {
   _UniOp(int op, Evaluable x) : super(op, [x]);
 
-  List<double> evaluate() => deps[0].evaluate().map(_op).toList();
+  void evaluate() {
+    final a = deps[0];
+    a.evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = _op(a.value[i]);
+    }
+  }
 
   double _op(double x);
 }
@@ -174,33 +180,35 @@ class InverseSqrt extends _UniOp {
 class Length extends OpExtInst {
   Length(Evaluable a) : super(_length, [a], floatT);
 
-  List<double> evaluate() => [_calculateLength(deps[0].evaluate())];
+  void evaluate() {
+    final a = deps[0];
+    a.evaluate();
+    value[0] = _calculateLength(a.value);
+  }
 }
 
 class Normalize extends OpExtInst {
   Normalize(Evaluable a) : super(_normalize, [a]);
 
-  List<double> evaluate() {
-    final aResult = deps[0].evaluate();
-    final len = _calculateLength(aResult);
-    for (int i = 0; i < aResult.length; i++) {
-      aResult[i] /= len;
+  void evaluate() {
+    final a = deps[0];
+    a.evaluate();
+    final len = _calculateLength(a.value);
+    for (int i = 0; i < value.length; i++) {
+      value[i] = a.value[i] / len;
     }
-    return aResult;
   }
 }
 
 abstract class _BinOp extends OpExtInst {
   _BinOp(int op, Evaluable x, Evaluable y) : super(op, [x, y]);
 
-  List<double> evaluate() {
-    final valueA = deps[0].evaluate();
-    final valueB = deps[1].evaluate();
-    final out = List<double>(valueA.length);
-    for (int i = 0; i < out.length; i++) {
-      out[i] = _op(valueA[i], valueB[i]);
+  void evaluate() {
+    final a = deps[0]..evaluate();
+    final b = deps[1]..evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = _op(a.value[i], b.value[i]);
     }
-    return out;
   }
 
   double _op(double x, double y);
@@ -233,15 +241,13 @@ class FMax extends _BinOp {
 abstract class _TerOp extends OpExtInst {
   _TerOp(int op, Evaluable x, Evaluable y, Evaluable z) : super(op, [x, y, z]);
 
-  List<double> evaluate() {
-    final valueA = deps[0].evaluate();
-    final valueB = deps[1].evaluate();
-    final valueC = deps[2].evaluate();
-    final out = List<double>(valueA.length);
-    for (int i = 0; i < out.length; i++) {
-      out[i] = _op(valueA[i], valueB[i], valueC[i]);
+  void evaluate() {
+    final a = deps[0]..evaluate();
+    final b = deps[1]..evaluate();
+    final c = deps[2]..evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = _op(a.value[i], b.value[i], c.value[i]);
     }
-    return out;
   }
 
   double _op(double x, double y, double z);
@@ -276,14 +282,12 @@ class SmoothStep extends _TerOp {
 class Distance extends OpExtInst {
   Distance(Evaluable a, Evaluable b) : super(_distance, [a, b], floatT);
 
-  List<double> evaluate() {
-    final diff = List<double>(type.elementCount);
-    final resA = deps[0].evaluate();
-    final resB = deps[1].evaluate();
-    for (int i = 0; i < diff.length; i++) {
-      diff[i] = resB[i] - resA[i];
+  void evaluate() {
+    final a = deps[0]..evaluate();
+    final b = deps[1]..evaluate();
+    for (int i = 0; i < value.length; i++) {
+      value[i] = b.value[i] - a.value[i];
     }
-    return [_calculateLength(diff)];
   }
 }
 
@@ -291,23 +295,30 @@ class FaceForward extends OpExtInst {
   FaceForward(Evaluable n, Evaluable i, Evaluable nref)
       : super(_faceforward, [n, i, nref]);
 
-  List<double> evaluate() => _dot(deps[1].evaluate(), deps[2].evaluate()) < 0
-      ? deps[0].evaluate()
-      : deps[0].evaluate().map((i) => -i).toList();
+  void evaluate() {
+    final n = deps[0]..evaluate();
+    final i = deps[1]..evaluate();
+    final nref = deps[2]..evaluate();
+    if (_dot(i.value, nref.value) < 0) {
+      value.setAll(0, n.value);
+    } else {
+      for (int index = 0; index < value.length; index++) {
+        value[index] = -n.value[index];
+      }
+    }
+  }
 }
 
 class Reflect extends OpExtInst {
   Reflect(Evaluable i, Evaluable n) : super(_reflect, [i, n]);
 
-  List<double> evaluate() {
-    final iRes = deps[0].evaluate();
-    final nRes = deps[1].evaluate();
-    final dot = _dot(nRes, iRes);
-    final out = List<double>(iRes.length);
-    for (int index = 0; index < out.length; index++) {
-      out[index] = iRes[index] - 2.0 * dot * nRes[index];
+  void evaluate() {
+    final iRes = deps[0]..evaluate();
+    final nRes = deps[1]..evaluate();
+    final dot = _dot(nRes.value, iRes.value);
+    for (int index = 0; index < value.length; index++) {
+      value[index] = iRes.value[index] - 2.0 * dot * nRes.value[index];
     }
-    return out;
   }
 }
 

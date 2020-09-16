@@ -158,7 +158,10 @@ class Vec2 extends Expression with Vec2OrScalar {
   /// Returns `this - 2.0 * dot(normal, this) * normal`.
   Vec2 reflect(Vec2 normal) => Vec2._(Reflect(this._node, normal._node));
 
-  vm.Vector2 evaluate() => vm.Vector2.array(_node.evaluate());
+  vm.Vector2 evaluate() {
+    _node.evaluate();
+    return vm.Vector2.array(_node.value);
+  }
 
   bool get _isVec2 => true;
 

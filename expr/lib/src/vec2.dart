@@ -174,40 +174,40 @@ class Vec2 extends Expression with Vec2OrScalar {
   Vec2 _vec2Swizzle(int x, int y) =>
     Vec2._(OpVectorShuffle(this._node, [x, y]));
 
-  Vec2 get xx => _vec2Swizzle(1, 1);
-  Vec2 get xy => _vec2Swizzle(1, 2);
-  Vec2 get yx => _vec2Swizzle(2, 1);
-  Vec2 get yy => _vec2Swizzle(2, 2);
+  Vec2 get xx => _vec2Swizzle(0, 0);
+  Vec2 get xy => _vec2Swizzle(0, 1);
+  Vec2 get yx => _vec2Swizzle(1, 0);
+  Vec2 get yy => _vec2Swizzle(1, 1);
 
   Vec3 _vec3Swizzle(int x, int y, int z) =>
     Vec3._(OpVectorShuffle(this._node, [x, y, z]));
 
-  Vec3 get xxx => _vec3Swizzle(1, 1, 1);
-  Vec3 get xxy => _vec3Swizzle(1, 1, 2);
-  Vec3 get xyx => _vec3Swizzle(1, 2, 1);
-  Vec3 get xyy => _vec3Swizzle(1, 2, 2);
-  Vec3 get yxx => _vec3Swizzle(2, 1, 1);
-  Vec3 get yxy => _vec3Swizzle(2, 1, 2);
-  Vec3 get yyx => _vec3Swizzle(2, 2, 1);
-  Vec3 get yyy => _vec3Swizzle(2, 2, 2);
+  Vec3 get xxx => _vec3Swizzle(0, 0, 0);
+  Vec3 get xxy => _vec3Swizzle(0, 0, 1);
+  Vec3 get xyx => _vec3Swizzle(0, 1, 0);
+  Vec3 get xyy => _vec3Swizzle(0, 1, 1);
+  Vec3 get yxx => _vec3Swizzle(1, 0, 0);
+  Vec3 get yxy => _vec3Swizzle(1, 0, 1);
+  Vec3 get yyx => _vec3Swizzle(1, 1, 0);
+  Vec3 get yyy => _vec3Swizzle(1, 1, 1);
 
   Vec4 _vec4Swizzle(int x, int y, int z, int w) =>
     Vec4._(OpVectorShuffle(this._node, [x, y, z, w]));
 
-  Vec4 get xxxx => _vec4Swizzle(1, 1, 1, 1);
-  Vec4 get xxxy => _vec4Swizzle(1, 1, 1, 2);
-  Vec4 get xxyx => _vec4Swizzle(1, 1, 2, 1);
-  Vec4 get xxyy => _vec4Swizzle(1, 1, 2, 2);
-  Vec4 get xyxx => _vec4Swizzle(1, 2, 1, 1);
-  Vec4 get xyxy => _vec4Swizzle(1, 2, 1, 2);
-  Vec4 get xyyx => _vec4Swizzle(1, 2, 2, 1);
-  Vec4 get xyyy => _vec4Swizzle(1, 2, 2, 2);
-  Vec4 get yxxx => _vec4Swizzle(2, 1, 1, 1);
-  Vec4 get yxxy => _vec4Swizzle(2, 1, 1, 2);
-  Vec4 get yxyx => _vec4Swizzle(2, 1, 2, 1);
-  Vec4 get yxyy => _vec4Swizzle(2, 1, 2, 2);
-  Vec4 get yyxx => _vec4Swizzle(2, 2, 1, 1);
-  Vec4 get yyxy => _vec4Swizzle(2, 2, 1, 2);
-  Vec4 get yyyx => _vec4Swizzle(2, 2, 2, 1);
-  Vec4 get yyyy => _vec4Swizzle(2, 2, 2, 2);
+  Vec4 get xxxx => _vec4Swizzle(0, 0, 0, 0);
+  Vec4 get xxxy => _vec4Swizzle(0, 0, 0, 1);
+  Vec4 get xxyx => _vec4Swizzle(0, 0, 1, 0);
+  Vec4 get xxyy => _vec4Swizzle(0, 0, 1, 1);
+  Vec4 get xyxx => _vec4Swizzle(0, 1, 0, 0);
+  Vec4 get xyxy => _vec4Swizzle(0, 1, 0, 1);
+  Vec4 get xyyx => _vec4Swizzle(0, 1, 1, 0);
+  Vec4 get xyyy => _vec4Swizzle(0, 1, 1, 1);
+  Vec4 get yxxx => _vec4Swizzle(1, 0, 0, 0);
+  Vec4 get yxxy => _vec4Swizzle(1, 0, 0, 1);
+  Vec4 get yxyx => _vec4Swizzle(1, 0, 1, 0);
+  Vec4 get yxyy => _vec4Swizzle(1, 0, 1, 1);
+  Vec4 get yyxx => _vec4Swizzle(1, 1, 0, 0);
+  Vec4 get yyxy => _vec4Swizzle(1, 1, 0, 1);
+  Vec4 get yyyx => _vec4Swizzle(1, 1, 1, 0);
+  Vec4 get yyyy => _vec4Swizzle(1, 1, 1, 1);
 }

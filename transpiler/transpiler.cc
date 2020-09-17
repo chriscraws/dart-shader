@@ -28,8 +28,6 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleMemoryModel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleDecorate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFloat(const spv_parsed_instruction_t* inst);
-  spv_result_t HandleTypeImage(const spv_parsed_instruction_t* inst);
-  spv_result_t HandleTypeSampledImage(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeVector(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypePointer(const spv_parsed_instruction_t* inst);
   spv_result_t HandleTypeFunction(const spv_parsed_instruction_t* inst);
@@ -68,8 +66,6 @@ class TranspilerImpl : public Transpiler {
   uint32_t vec2_type_ = 0;
   uint32_t vec3_type_ = 0;
   uint32_t vec4_type_ = 0;
-  uint32_t image_type_ = 0;
-  uint32_t sampled_image_type_ = 0;
   uint32_t float_uniform_type_ = 0;
   uint32_t vec2_uniform_type_ = 0;
   uint32_t vec3_uniform_type_ = 0;
@@ -129,12 +125,6 @@ spv_result_t parse_instruction(
       break;
     case spv::OpTypeFloat:
       result = interpreter->HandleTypeFloat(parsed_instruction);
-      break;
-    case spv::OpTypeImage:
-      result = interpreter->HandleTypeImage(parsed_instruction);
-      break;
-    case spv::OpTypeSampledImage:
-      result = interpreter->HandleTypeSampledImage(parsed_instruction);
       break;
     case spv::OpTypeVector:
       result = interpreter->HandleTypeVector(parsed_instruction);
@@ -374,75 +364,6 @@ spv_result_t TranspilerImpl::HandleDecorate(
   return SPV_SUCCESS;
 }
 
-spv_result_t TranspilerImpl::HandleTypeImage(
-    const spv_parsed_instruction_t* inst) {
-  static constexpr int kSampledTypeIndex = 1;
-  static constexpr int kDimIndex = 2;
-  static constexpr int kDepthIndex = 3;
-  static constexpr int kArrayedIndex = 4;
-  static constexpr int kMultiSampledIndex = 5;
-  static constexpr int kSampledIndex = 6;
-  static constexpr int kFormatIndex = 7;
-  static constexpr int kAccessQualifierIndex = 8;
-
-  if (get_operand(inst, kSampledTypeIndex) != vec4_type_) {
-    last_error_msg_ = "OpTypeImage: Must use Vec4 sample type.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kDimIndex) != spv::Dim2D) {
-    last_error_msg_ = "OpTypeImage: Must use Dim 2D.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kDepthIndex) != 0) {
-    last_error_msg_ = "OpTypeImage: Must be a non-depth image.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kArrayedIndex) != 0) {
-    last_error_msg_ = "OpTypeImage: Must be a non-arrayed image.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kMultiSampledIndex) != 0) {
-    last_error_msg_ = "OpTypeImage: Must be a single-sampled image.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kSampledIndex) != 1) {
-    last_error_msg_ = "OpTypeImage: Must be an image that uses a sampler.";
-    return SPV_UNSUPPORTED;
-  }
-
-  if (get_operand(inst, kFormatIndex) != spv::ImageFormatRgba8ui) {
-    last_error_msg_ = "OpTypeImage: Only format RGBA8UI is supported.";
-    return SPV_UNSUPPORTED;
-  }
-
-  static constexpr int kBaseOperandCount = 9;
-  if (inst->num_operands > kBaseOperandCount &&
-      get_operand(inst, kAccessQualifierIndex) != 0) {
-    last_error_msg_ = "OpTypeImage: Must be Read-Only.";
-    return SPV_UNSUPPORTED;
-  }
-
-  image_type_ = inst->result_id;
-
-  return SPV_SUCCESS;
-}
-
-spv_result_t TranspilerImpl::HandleTypeSampledImage(
-    const spv_parsed_instruction_t* inst) {
-  static constexpr int kImageTypeIndex = 1;
-  if (image_type_ == 0 || get_operand(inst, kImageTypeIndex) != image_type_) {
-    last_error_msg_ = "OpTypeSampledImage: Invalid image type.";
-    return SPV_UNSUPPORTED;
-  }
-  sampled_image_type_ = inst->result_id;
-  return SPV_SUCCESS;
-}
-
 spv_result_t TranspilerImpl::HandleTypeFloat(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kWidthIndex = 1;
@@ -518,8 +439,6 @@ spv_result_t TranspilerImpl::HandleTypePointer(
     vec3_uniform_type_ = inst->result_id;
   } else if (type == vec4_type_) {
     vec4_uniform_type_ = inst->result_id;
-  } else if (type == sampled_image_type_) {
-    sampler_uniform_type_ = inst->result_id;
   } else {
     last_error_msg_ = "OpTypePointer: Must be a supported SSIR type.";
     return SPV_UNSUPPORTED;
@@ -602,7 +521,8 @@ spv_result_t TranspilerImpl::HandleVariable(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kStorageClassIndex = 2;
 
-  if (get_operand(inst, kStorageClassIndex) != spv::StorageClassUniformConstant) {
+  if (get_operand(inst, kStorageClassIndex) !=
+      spv::StorageClassUniformConstant) {
     last_error_msg_ = "OpVariable: Must use storage class 'UniformConstant'";
     return SPV_UNSUPPORTED;
   }

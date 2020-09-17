@@ -13,10 +13,10 @@ const vec2T = OpTypeVec._(floatT, 2);
 const vec3T = OpTypeVec._(floatT, 3);
 const vec4T = OpTypeVec._(floatT, 4);
 
-const uniformFloatT = OpTypePointer._(floatT);
-const uniformVec2T = OpTypePointer._(vec2T);
-const uniformVec3T = OpTypePointer._(vec3T);
-const uniformVec4T = OpTypePointer._(vec4T);
+final uniformFloatT = OpTypePointer._(floatT);
+final uniformVec2T = OpTypePointer._(vec2T);
+final uniformVec3T = OpTypePointer._(vec3T);
+final uniformVec4T = OpTypePointer._(vec4T);
 
 List<int> _toWords(String string) => [
       ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
@@ -133,15 +133,20 @@ class OpTypeVec extends Instruction with Type {
         i.identify(componentType),
         elementCount,
       ];
+
+  List<Instruction> get deps => [componentType];
 }
 
 class OpTypePointer extends Instruction with Type {
   final int elementCount = -1;
   final Type objectType;
+  final List<Instruction> deps;
 
-  const OpTypePointer._(this.objectType)
+  OpTypePointer._(this.objectType)
       : assert(objectType != null),
+        deps = [objectType],
         super(
+          isType: true,
           result: true,
           opCode: 32,
         );
@@ -155,11 +160,13 @@ class OpTypePointer extends Instruction with Type {
 class OpTypeFunction extends Instruction {
   final Type returnType;
   final List<Type> paramTypes;
+  final List<Instruction> deps;
 
   OpTypeFunction({
     this.returnType,
     this.paramTypes = const [],
   })  : assert(returnType != null),
+        deps = [returnType, ...paramTypes],
         super(
           opCode: 33,
           result: true,
@@ -174,8 +181,12 @@ class OpTypeFunction extends Instruction {
 
 class OpFunction extends Instruction {
   final OpTypeFunction fnType;
+  final List<Instruction> deps;
+
   OpFunction(this.fnType)
-      : super(
+      : assert(fnType != null),
+        deps = [fnType],
+        super(
           result: true,
           type: fnType.returnType,
           opCode: 54,

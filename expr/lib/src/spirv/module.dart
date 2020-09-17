@@ -58,7 +58,7 @@ class Module extends Identifier {
   ByteBuffer encode() {
     _ids.clear();
 
-    final main = OpFunction(_mainType);
+    final main = OpFunction(_mainType)..resolve(this);
 
     final instructions = <Instruction>[
       // capabilities
@@ -77,17 +77,6 @@ class Module extends Identifier {
         name: 'main',
         target: main,
       ),
-
-      // type delcarations
-      floatT,
-      uniformFloatT,
-      vec2T,
-      uniformVec2T,
-      vec3T,
-      uniformVec3T,
-      vec4T,
-      uniformVec4T,
-      _mainType,
     ];
 
     // get main definition, and identify all dependent instructions.
@@ -98,6 +87,9 @@ class Module extends Identifier {
       _ids.values, // ids as keys
       _ids.keys, // instructions as values
     );
+
+    // add type declarations
+    instructions.addAll(sortedMap.values.where((i) => i.isType));
 
     // add variable declarations
     instructions.addAll(sortedMap.values.where((i) => i.isDeclaration));

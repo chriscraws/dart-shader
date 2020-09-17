@@ -10,7 +10,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 /// If true, overwrites all the golen files. If you run the tests with this
 /// set to true, be sure to use `spirv-val` to validate all files matching
 /// `test/*.golden`. Then set this back to false.
-final overwriteGoldens = false;
+final overwriteGoldens = true;
 
 Future<void> matchGolden(ByteBuffer item, String filename) async {
   assert(filename != null);

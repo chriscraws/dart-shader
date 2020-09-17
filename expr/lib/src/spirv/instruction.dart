@@ -64,6 +64,9 @@ abstract class Instruction {
   /// by this Instruction has been assigned and ID by the
   /// Identifier.
   void resolve(Identifier i) {
+    if (type != null) {
+      type.resolve(i);
+    }
     for (final dep in deps) {
       dep.resolve(i);
     }

@@ -6,7 +6,7 @@ import 'dart:typed_data';
 
 import 'instruction.dart';
 
-final _storageClassUniform = 2;
+final _storageClassUniformConstant = 0;
 
 const floatT = OpTypeFloat._(32);
 const vec2T = OpTypeVec._(floatT, 2);
@@ -152,7 +152,7 @@ class OpTypePointer extends Instruction with Type {
         );
 
   List<int> operands(Identifier i) => [
-        _storageClassUniform,
+        _storageClassUniformConstant,
         i.identify(objectType),
       ];
 }
@@ -328,7 +328,7 @@ class OpVariable extends Instruction {
   OpVariable.vec3Uniform() : this._(uniformVec3T);
   OpVariable.vec4Uniform() : this._(uniformVec4T);
 
-  List<int> operands(Identifier i) => [_storageClassUniform];
+  List<int> operands(Identifier i) => [_storageClassUniformConstant];
 
   void evaluate() {}
 }

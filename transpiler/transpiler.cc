@@ -504,7 +504,7 @@ spv_result_t TranspilerImpl::HandleTypePointer(
   uint32_t type = get_operand(inst, kTypeIndex);
   uint32_t storage_class = get_operand(inst, kStorageClassIndex);
 
-  if (storage_class != spv::StorageClassUniform) {
+  if (storage_class != spv::StorageClassUniformConstant) {
     last_error_msg_ =
         "OpTypePointer: Only storage class 'UniformConstant' is supported.";
     return SPV_UNSUPPORTED;
@@ -602,8 +602,8 @@ spv_result_t TranspilerImpl::HandleVariable(
     const spv_parsed_instruction_t* inst) {
   static constexpr int kStorageClassIndex = 2;
 
-  if (get_operand(inst, kStorageClassIndex) != spv::StorageClassUniform) {
-    last_error_msg_ = "OpVariable: Must use storage class 'Uniform'";
+  if (get_operand(inst, kStorageClassIndex) != spv::StorageClassUniformConstant) {
+    last_error_msg_ = "OpVariable: Must use storage class 'UniformConstant'";
     return SPV_UNSUPPORTED;
   }
 

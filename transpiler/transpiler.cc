@@ -4,6 +4,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 #include "external/com_google_absl/absl/memory/memory.h"
 #include "external/spirv_headers/include/spirv/unified1/GLSL.std.450.h"
@@ -36,6 +37,7 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleVariable(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunction(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFunctionParameter(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleFunctionCall(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleReturnValue(const spv_parsed_instruction_t* inst);
   spv_result_t HandleCompositeConstruct(const spv_parsed_instruction_t* inst);
@@ -75,6 +77,8 @@ class TranspilerImpl : public Transpiler {
   uint32_t frag_position_param_ = 0;
   uint32_t return_ = 0;
   uint32_t last_op_ = 0;
+
+  std::unordered_map<uint32_t, std::string> imported_functions_;
 
   std::stringstream sksl_;
 };
@@ -149,6 +153,9 @@ spv_result_t parse_instruction(
       break;
     case spv::OpFunctionParameter:
       result = interpreter->HandleFunctionParameter(parsed_instruction);
+      break;
+    case spv::OpFunctionCall:
+      result = interpreter->HandleFunctionCall(parsed_instruction);
       break;
     case spv::OpLabel:
       result = interpreter->HandleLabel(parsed_instruction);
@@ -345,22 +352,30 @@ spv_result_t TranspilerImpl::HandleDecorate(
     return SPV_UNSUPPORTED;
   }
 
-  if (get_operand(inst, kLinkageType) != spv::LinkageTypeExport) {
-    last_error_msg_ =
-        "OpDecorate: Only exporting is available "
-        "using LinkageAttributes.";
-    return SPV_UNSUPPORTED;
+  auto linkage_type =
+      static_cast<spv::LinkageType>(get_operand(inst, kLinkageType));
+
+  const char* name_cstr = get_literal(inst, kLinkageName);
+  std::string name(name_cstr);
+  if (strcmp(name_cstr, kMainExportName) == 0) {
+    if (linkage_type != spv::LinkageTypeExport) {
+      last_error_msg_ = "OpDecorate: Main must be an exported function.";
+      return SPV_UNSUPPORTED;
+    }
+
+    main_function_ = get_operand(inst, kTargetIndex);
+    return SPV_SUCCESS;
   }
 
-  const char* name = get_literal(inst, kLinkageName);
-  if (strcmp(name, kMainExportName) != 0 || main_function_ != 0) {
-    last_error_msg_ =
-        "OpDecorate: There can only be a single exported "
-        "function named 'main'";
-    return SPV_UNSUPPORTED;
+  if (linkage_type != spv::LinkageTypeImport) {
+    // Ignore all non-main exports.
+    return SPV_SUCCESS;
   }
 
-  main_function_ = get_operand(inst, kTargetIndex);
+  imported_functions_[get_operand(inst, kTargetIndex)] = name;
+
+  sksl_ << "in shader " << name << ";\n";
+
   return SPV_SUCCESS;
 }
 
@@ -590,6 +605,28 @@ spv_result_t TranspilerImpl::HandleFunctionParameter(
   frag_position_param_ = inst->result_id;
 
   sksl_ << "half2 " << ResolveName(frag_position_param_);
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleFunctionCall(
+    const spv_parsed_instruction_t* inst) {
+  static constexpr int kFunctionIdIndex = 2;
+  static constexpr int kPosParamIndex = 3;
+  static constexpr int kOperandCountWithOneParameter = 4;
+
+  uint32_t function_id = get_operand(inst, kFunctionIdIndex);
+  if (imported_functions_.count(function_id) == 0 ||
+      inst->type_id != vec4_type_ ||
+      inst->num_operands != kOperandCountWithOneParameter) {
+    last_error_msg_ =
+        "OpFunctionCall: Only imported vec4 fn(vec2) functions are supported";
+    return SPV_UNSUPPORTED;
+  }
+
+  sksl_ << "float4 " << ResolveName(inst->result_id) << " = sample("
+        << imported_functions_[function_id] << ", "
+        << ResolveName(get_operand(inst, kPosParamIndex)) << ");\n";
 
   return SPV_SUCCESS;
 }

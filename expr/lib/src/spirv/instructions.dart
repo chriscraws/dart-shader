@@ -18,10 +18,16 @@ final uniformVec2T = OpTypePointer._(vec2T);
 final uniformVec3T = OpTypePointer._(vec3T);
 final uniformVec4T = OpTypePointer._(vec4T);
 
-List<int> _toWords(String string) => [
-      ...Uint8List.fromList(utf8.encode(string)).buffer.asInt32List(),
-      0, // null padding
-    ];
+List<int> _toWords(String string) {
+  final utfBytes = utf8.encode(string);
+  // include null word required by SPIR-V.
+  final padding = 4;
+  final paddedList = Uint8List(utfBytes.length + padding);
+  for (int i = 0; i < utfBytes.length; i++) {
+    paddedList[i] = utfBytes[i];
+  }
+  return paddedList.buffer.asUint32List();
+}
 
 class OpCapability extends Instruction {
   static const matrix = OpCapability._(0);
@@ -46,6 +52,7 @@ class OpDecorate extends Instruction {
 
   static const int linkageAttributes = 41;
   static const int linkageExport = 0;
+  static const int linkageImport = 1;
 
   OpDecorate({
     this.decoration,
@@ -66,6 +73,18 @@ class OpDecorate extends Instruction {
           extraOperands: [
             ..._toWords(name),
             linkageExport,
+          ],
+        );
+
+  OpDecorate.import({
+    OpFunction function,
+    String name,
+  }) : this(
+          target: function,
+          decoration: linkageAttributes,
+          extraOperands: [
+            ..._toWords(name),
+            linkageImport,
           ],
         );
 
@@ -183,18 +202,85 @@ class OpFunction extends Instruction {
   final OpTypeFunction fnType;
   final List<Instruction> deps;
 
-  OpFunction(this.fnType)
+  OpFunction._(this.fnType)
       : assert(fnType != null),
         deps = [fnType],
         super(
           result: true,
           type: fnType.returnType,
           opCode: 54,
+          isFunction: true,
         );
 
   List<int> operands(Identifier i) => [
         0, // no function control
         i.identify(fnType), // function type
+      ];
+}
+
+class ShaderFunction extends OpFunction {
+  static final _type = OpTypeFunction(
+    returnType: vec4T,
+    paramTypes: [vec2T],
+  );
+
+  final void Function(double x, double y, List<double> result) evaluator;
+
+  ShaderFunction([this.evaluator]) : super._(_type);
+
+  OpFunctionCall call(Evaluable pos) {
+    assert(pos.type == vec2T);
+    return OpFunctionCall(
+      function: this,
+      params: [pos],
+      evaluator: _evaluate,
+    );
+  }
+
+  void _evaluate(List<Evaluable> params, List<double> result) {
+    if (evaluator == null) {
+      return;
+    }
+
+    assert(params.length == 1);
+    assert(result.length == 4);
+    final pos = params[0];
+    pos.evaluate();
+    evaluator(pos.value[0], pos.value[1], result);
+  }
+}
+
+class OpFunctionCall extends Instruction with Evaluable {
+  final OpFunction function;
+  final List<Evaluable> params;
+  final List<Instruction> deps;
+  final void Function(List<Evaluable> params, List<double> result) evaluator;
+
+  OpFunctionCall({
+    this.function,
+    this.params,
+    this.evaluator,
+  })  : assert(function != null),
+        assert(params != null),
+        assert(evaluator != null),
+        assert(params.length == function.fnType.paramTypes.length),
+        deps = [function, ...params],
+        super(
+          opCode: 57,
+          result: true,
+          type: function.type,
+        ) {
+    value.length = type.elementCount;
+    for (int i = 0; i < value.length; i++) {
+      value[i] = 0;
+    }
+  }
+
+  void evaluate() => evaluator(params, value);
+
+  List<int> operands(Identifier i) => [
+        i.identify(function),
+        ...params.map(i.identify),
       ];
 }
 

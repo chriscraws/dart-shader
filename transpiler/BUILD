@@ -24,6 +24,7 @@ cc_test(
     "//expr/test/goldens:vec2op.golden",
     "//expr/test/goldens:vec3op.golden",
     "//expr/test/goldens:vec4op.golden",
+    "//expr/test/goldens:test_shader.golden",
   ],
   deps = [
     ":transpiler",

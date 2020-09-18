@@ -6,7 +6,10 @@
 /// See [Shader] to start.
 library expr;
 
+import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui';
+
 import 'package:vector_math/vector_math.dart' as vm;
 
 import 'src/spirv/module.dart';
@@ -15,6 +18,7 @@ import 'src/spirv/instructions.dart';
 import 'src/spirv/glsl.dart';
 
 part 'src/expr/expression.dart';
+part 'src/expr/sampler.dart';
 part 'src/expr/scalar.dart';
 part 'src/expr/shader.dart';
 part 'src/expr/vec2.dart';

@@ -41,6 +41,7 @@ class TranspilerImpl : public Transpiler {
   spv_result_t HandleLabel(const spv_parsed_instruction_t* inst);
   spv_result_t HandleReturnValue(const spv_parsed_instruction_t* inst);
   spv_result_t HandleCompositeConstruct(const spv_parsed_instruction_t* inst);
+  spv_result_t HandleCompositeExtract(const spv_parsed_instruction_t* inst);
   spv_result_t HandleLoad(const spv_parsed_instruction_t* inst);
   spv_result_t HandleFNegate(const spv_parsed_instruction_t* inst);
   spv_result_t HandleOperator(const spv_parsed_instruction_t* inst, char op);
@@ -165,6 +166,9 @@ spv_result_t parse_instruction(
       break;
     case spv::OpCompositeConstruct:
       result = interpreter->HandleCompositeConstruct(parsed_instruction);
+      break;
+    case spv::OpCompositeExtract:
+      result = interpreter->HandleCompositeExtract(parsed_instruction);
       break;
     case spv::OpLoad:
       result = interpreter->HandleLoad(parsed_instruction);
@@ -561,9 +565,11 @@ spv_result_t TranspilerImpl::HandleFunction(
   static constexpr int kFunctionControlIndex = 2;
   static constexpr int kFunctionTypeIndex = 3;
 
-  if (inst->result_id == 0 || inst->result_id != main_function_) {
+  if (inst->result_id == 0 ||
+      (inst->result_id != main_function_ &&
+       imported_functions_.count(inst->result_id) == 0)) {
     last_error_msg_ =
-        "OpFunction: There must be one function exported as 'main'";
+        "OpFunction: Must be exported 'main' or imported function.";
     return SPV_UNSUPPORTED;
   }
 
@@ -584,7 +590,9 @@ spv_result_t TranspilerImpl::HandleFunction(
     return SPV_UNSUPPORTED;
   }
 
-  sksl_ << "\nhalf4 main(";
+  if (inst->result_id == main_function_) {
+    sksl_ << "\nhalf4 main(";
+  }
 
   return SPV_SUCCESS;
 }
@@ -624,7 +632,7 @@ spv_result_t TranspilerImpl::HandleFunctionCall(
     return SPV_UNSUPPORTED;
   }
 
-  sksl_ << "float4 " << ResolveName(inst->result_id) << " = sample("
+  sksl_ << "  float4 " << ResolveName(inst->result_id) << " = sample("
         << imported_functions_[function_id] << ", "
         << ResolveName(get_operand(inst, kPosParamIndex)) << ");\n";
 
@@ -777,6 +785,29 @@ spv_result_t TranspilerImpl::HandleCompositeConstruct(
     }
   }
   sksl_ << ");\n";
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t TranspilerImpl::HandleCompositeExtract(
+    const spv_parsed_instruction_t* inst) {
+  std::string type = ResolveType(inst->type_id);
+  if (type.empty()) {
+    last_error_msg_ = "Invalid type.";
+    return SPV_ERROR_INVALID_BINARY;
+  }
+
+  static constexpr int kCompositeIndex = 2;
+  static constexpr int kIndexIndex = 3;
+
+  if (inst->num_operands > kIndexIndex + 1) {
+    last_error_msg_ = "OpCompositeExtract: Only one index is supported.";
+    return SPV_UNSUPPORTED;
+  }
+
+  sksl_ << "  " << type << " " << ResolveName(inst->result_id) << " = "
+        << ResolveName(get_operand(inst, kCompositeIndex)) << '['
+        << get_operand(inst, kIndexIndex) << "];\n";
 
   return SPV_SUCCESS;
 }

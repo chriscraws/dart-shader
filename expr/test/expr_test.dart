@@ -2,9 +2,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:expr/expr.dart';
-import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// If true, overwrites all the golen files. If you run the tests with this
@@ -30,10 +30,12 @@ class ColorShader extends Shader {
 }
 
 class TestShader extends Shader {
+  TestShader(Image img) : image = Sampler(img);
   final time = ScalarUniform();
   final resolution = Vec2Uniform();
   final background = Vec3Uniform();
   final foreground = Vec4Uniform();
+  final Sampler image;
 
   Vec4 color(Vec2 position) {
     final uv = (position / resolution - Vec2.all(0.5)) * Scalar(2);
@@ -46,7 +48,7 @@ class TestShader extends Shader {
     final c = mixAmt
         .mix(
           Vec4.of([background, Scalar(1)]),
-          foreground,
+          foreground * image.sample(uv),
         )
         .abs();
 
@@ -61,7 +63,10 @@ void main() {
   });
 
   test('test shader', () async {
-    final shader = TestShader();
+    final pngBytes = File('logo_flutter_1080px_clr.png').readAsBytesSync();
+    final codec = await instantiateImageCodec(pngBytes);
+    final frame = await codec.getNextFrame();
+    final shader = TestShader(frame.image);
     await matchGolden(shader.toSPIRV(), 'test_shader.golden');
   });
 

@@ -9,11 +9,6 @@ import 'instructions.dart';
 final _magicNumber = 0x07230203;
 final _version = 0x00010500;
 
-final _mainType = OpTypeFunction(
-  returnType: vec4T,
-  paramTypes: [vec2T],
-);
-
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
 class Module extends Identifier {
@@ -58,7 +53,7 @@ class Module extends Identifier {
   ByteBuffer encode() {
     _ids.clear();
 
-    final main = OpFunction(_mainType)..resolve(this);
+    final main = ShaderFunction()..resolve(this);
 
     final instructions = <Instruction>[
       // capabilities
@@ -88,11 +83,27 @@ class Module extends Identifier {
       _ids.keys, // instructions as values
     );
 
+    // decorate all imported functions
+    final importedFunctions =
+        sortedMap.values.where((i) => i.isFunction && i != main).toList();
+    for (int i = 0; i < importedFunctions.length; i++) {
+      instructions.add(OpDecorate.import(
+        function: importedFunctions[i],
+        name: 's${i + 10 - 10}',
+      ));
+    }
+
     // add type declarations
     instructions.addAll(sortedMap.values.where((i) => i.isType));
 
     // add variable declarations
     instructions.addAll(sortedMap.values.where((i) => i.isDeclaration));
+
+    // declare imported functions
+    for (int i = 0; i < importedFunctions.length; i++) {
+      instructions.add(importedFunctions[i]);
+      instructions.add(OpFunctionEnd());
+    }
 
     // add function declaration opening
     instructions.addAll([

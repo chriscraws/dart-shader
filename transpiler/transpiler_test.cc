@@ -73,4 +73,15 @@ TEST(TranspilerTest, GLSLGolden) {
   std::cout << t->GetSkSL();
 }
 
+TEST(TranspilerTest, TestShaderGolden) {
+  std::ifstream input("expr/test/goldens/test_shader.golden", std::ios::binary);
+  std::string spirv((std::istreambuf_iterator<char>(input)),
+                    std::istreambuf_iterator<char>());
+  auto t = Transpiler::create();
+  auto result = t->Transpile(spirv.c_str(), spirv.length());
+  EXPECT_EQ(result.message, "");
+  EXPECT_EQ(result.status, kSuccess);
+  std::cout << t->GetSkSL();
+}
+
 }  // namespace ssir

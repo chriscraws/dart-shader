@@ -43,6 +43,9 @@ abstract class Instruction {
   // True if this instruction is a decoration.
   final bool isDecoration;
 
+  // True if this instruction is a function.
+  final bool isFunction;
+
   // Null if not a constant, otherwise, the constant value.
   final double constant;
 
@@ -58,6 +61,7 @@ abstract class Instruction {
     this.isDeclaration = false,
     this.isType = false,
     this.isDecoration = false,
+    this.isFunction = false,
   });
 
   /// Ensure that every Instruction included transitively

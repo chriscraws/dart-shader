@@ -56,6 +56,21 @@ class TestShader extends Shader {
   }
 }
 
+class UniformShader extends Shader {
+  final scalar = ScalarUniform();
+  final vec2 = Vec2Uniform();
+  final vec3 = Vec3Uniform();
+  final vec4 = Vec4Uniform();
+
+  Vec4 color(Vec2 position) =>
+      vec4 +
+      Vec4.of([
+        scalar,
+        vec2,
+        vec3.x + vec3.y + vec3.z,
+      ]);
+}
+
 void main() {
   test('simple shader', () async {
     final shader = ColorShader(Vec4(0, 0.25, 0.75, 1.0));
@@ -199,5 +214,30 @@ void main() {
     final result = Vec4.all(0).distanceTo(Vec4.all(5)).evaluate();
     final expected = vm.Vector4.all(0).distanceTo(vm.Vector4.all(5));
     expect(result, equals(expected));
+  });
+
+  test('writes uniform data', () {
+    final shader = UniformShader();
+    final expectedSize = 1 + 2 + 3 + 4; // scalar, vec2, vec3, vec4
+    Float32List output = Float32List(expectedSize);
+    shader.writeUniformData(output);
+
+    // expect all zeroes
+    for (final v in output) {
+      expect(v, equals(0));
+    }
+
+    // update values
+    shader.scalar.value = 10.0;
+    shader.vec2.value = vm.Vector2(8, 9);
+    shader.vec3.value = vm.Vector3(5, 6, 7);
+    shader.vec4.value = vm.Vector4(1, 2, 3, 4);
+
+    // re-write values to buffer
+    shader.writeUniformData(output);
+
+    // expect correct values - this ordering may be brittle with library changes.
+    final expected = [1, 2, 3, 4, 10, 8, 9, 5, 6, 7];
+    expect(output, orderedEquals(expected));
   });
 }

@@ -17,6 +17,8 @@ class Module extends Identifier {
 
   final _ids = <Instruction, int>{};
   final _constants = <Instruction>{};
+  final _uniforms = <OpVariable>[];
+  int _expectedUniformBufferSize = 0;
 
   int _bound = 0;
   Instruction _color;
@@ -47,6 +49,21 @@ class Module extends Identifier {
   set color(Instruction vec4) {
     assert(vec4.type == vec4T);
     _color = vec4;
+  }
+
+  void writeUniformData(Float32List data) {
+    if (data.length != _expectedUniformBufferSize) {
+      throw Exception('attempted to write to uniform buffer with wrong size. ' +
+          'got ${data.length} but expected $_expectedUniformBufferSize');
+    }
+    int i = 0;
+    for (final uniform in _uniforms) {
+      final value = uniform.variable;
+      for (int ui = 0; ui < value.length; ui++) {
+        data[i] = value[ui];
+        i++;
+      }
+    }
   }
 
   // Encode the module to binary SPIR-V.
@@ -98,6 +115,14 @@ class Module extends Identifier {
 
     // add variable declarations
     instructions.addAll(sortedMap.values.where((i) => i.isDeclaration));
+
+    // collect uniforms
+    _uniforms.addAll(sortedMap.values
+        .where((i) => i is OpVariable)
+        .map((i) => i as OpVariable));
+    for (final uniform in _uniforms) {
+      _expectedUniformBufferSize += uniform.objectType.elementCount;
+    }
 
     // declare imported functions
     for (int i = 0; i < importedFunctions.length; i++) {

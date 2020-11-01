@@ -3,9 +3,18 @@ part of '../../expr.dart';
 /// Shader can be used to construct a spir-v module
 /// compatible with Flutter.
 abstract class Shader {
+  Shader() {
+    _module = Module();
+    final pos = Vec2._(Module.position);
+    _module.color = color(pos)._node;
+    _spirv = _module.encode();
+  }
+
   final _position = Vec2Uniform();
 
   Vec4 _cachedExpression;
+  Module _module;
+  ByteBuffer _spirv;
 
   /// The color of each fragment position.
   ///
@@ -21,11 +30,12 @@ abstract class Shader {
     return _cachedExpression.evaluate();
   }
 
+  void writeUniformData(Float32List data) {
+    _module.writeUniformData(data);
+  }
+
   /// Encode the shader as Flutter-compatible SPIR-V.
   ByteBuffer toSPIRV() {
-    final module = Module();
-    final pos = Vec2._(Module.position);
-    module.color = color(pos)._node;
-    return module.encode();
+    return _spirv;
   }
 }

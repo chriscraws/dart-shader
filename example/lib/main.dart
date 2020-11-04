@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:expr/expr.dart';
 
@@ -45,24 +46,48 @@ class MyHomePage extends StatefulWidget {
   // always marked "final".
 
   final String title;
+	final shader = MainShader();
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
+	final notifier = ChangeNotifier();
+	Ticker ticker;
+	AnimationController _controller;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+	void initState() {
+		super.initState();
+		_controller = AnimationController(
+			vsync: this,
+			duration: Duration(seconds: 2),
+		)..addStatusListener((status) {
+			if (status == AnimationStatus.completed) {
+        _controller.reverse();
+			} else if (status == AnimationStatus.dismissed) {
+				_controller.forward();
+			}
+		})..forward();
+		final curvedAnim = CurvedAnimation(
+			parent: _controller,
+			curve: Curves.bounceOut,
+			reverseCurve: Curves.bounceIn,
+		);
+
+		ticker = createTicker((duration) {
+			notifier.notifyListeners();
+			widget.shader.time.value = duration.inMilliseconds.toDouble() / 1000.0;
+			
+			final pos = widget.shader.circlePos;
+			pos.value.x = -(curvedAnim.value - 0.5) * 0.2;
+		})..start();
+	}
+
+	void dispose() {
+		_controller.dispose();
+		super.dispose();
+	}
 
   @override
   Widget build(BuildContext context) {
@@ -73,16 +98,15 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
       body: Center(
 				child: CustomPaint(
-						painter: ShaderPainter(FragmentShader.spirv(
-							MainShader().toSPIRV().asUint8List(),
-						)),
+						painter: ShaderPainter(
+							ssirShader: widget.shader,
+							shader: FragmentShader.spirv(
+								widget.shader.toSPIRV().asUint8List()),
+							repaint: notifier,
+							resolution: widget.shader.resolution,
+						),
 						size: Size.infinite,
 					),
 				),
@@ -91,19 +115,55 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class MainShader extends Shader {
-	Vec4 color(Vec2 position) => Vec4.of([
-		(position.y / Scalar(200)).sin(),
-		Vec3(1.0, 0.0, 1.0),
-	]);
+	final time = ScalarUniform();
+	final resolution = Vec2Uniform();
+	final circlePos = Vec2Uniform();
+
+	Scalar dcircle(Vec2 p, Scalar r) => p.length() - r;
+
+	Vec4 color(Vec2 position) {
+		final aspect = resolution.x / resolution.y;
+		Vec2 p = position / resolution.x.v2 -
+			Vec2.of(0.5.s, 0.5.s / aspect);
+
+		p -= circlePos;
+		p += Vec2.of(0.s, 0.03.s * sin(time + 30.s * p.y));
+
+		final pixel = 1.s / resolution.x;
+		final b = dcircle(p, 0.13.s).smoothStep(0.0.s, pixel);
+		return Vec4.of([
+			b.v3,
+			1.s,
+		]);
+	}
+}
+
+extension E on num {
+	Scalar get s => Scalar(this.toDouble());
+	Vec2 get v2 => Vec2.all(this.toDouble());
 }
 
 class ShaderPainter extends CustomPainter {
+	final Shader ssirShader;
 	final FragmentShader shader;
+	final Listenable repaint;
+	final Vec2Uniform resolution;
 
-	ShaderPainter(this.shader);
+	ShaderPainter({
+		this.ssirShader,
+		this.shader,
+		this.repaint,
+		this.resolution,
+	}) : super(repaint: repaint);
 
 	@override
 	void paint(Canvas canvas, Size size) {
+		resolution.value
+			..x = size.width
+			..y = size.height;
+
+		ssirShader.writeUniformData(shader.setFloatUniform);
+		shader.refresh();
 		canvas.drawRect(
 			Offset.zero & size,
 			Paint()..shader = shader,

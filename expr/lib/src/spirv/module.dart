@@ -51,16 +51,12 @@ class Module extends Identifier {
     _color = vec4;
   }
 
-  void writeUniformData(Float32List data) {
-    if (data.length != _expectedUniformBufferSize) {
-      throw Exception('attempted to write to uniform buffer with wrong size. ' +
-          'got ${data.length} but expected $_expectedUniformBufferSize');
-    }
+  void writeUniformData(void Function(int, double) setter) {
     int i = 0;
     for (final uniform in _uniforms) {
       final value = uniform.variable;
       for (int ui = 0; ui < value.length; ui++) {
-        data[i] = value[ui];
+        setter(i, value[ui]);
         i++;
       }
     }

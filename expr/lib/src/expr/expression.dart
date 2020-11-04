@@ -36,3 +36,7 @@ T acos<T extends Expression>(T val) {
 T atan<T extends Expression>(T val) {
   return val._construct(ATan(val._node));
 }
+
+T pow<T extends Expression>(T x, T y) {
+  return x._construct(Pow(x._node, y._node));
+}

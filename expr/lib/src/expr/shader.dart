@@ -30,8 +30,8 @@ abstract class Shader {
     return _cachedExpression.evaluate();
   }
 
-  void writeUniformData(Float32List data) {
-    _module.writeUniformData(data);
+  void writeUniformData(void Function(int, double) setter) {
+    _module.writeUniformData(setter);
   }
 
   /// Encode the shader as Flutter-compatible SPIR-V.

@@ -14,8 +14,14 @@ class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   /// Construct a Vec2 with all members set to this value.
   Vec2 vec2() => Vec2.of(this, this);
 
+	/// Alias for [vec2]
+	Vec2 get v2 => vec2();
+
   /// Construct a Vec3 with all members set to this value.
   Vec3 vec3() => Vec3.of([this, this, this]);
+
+	/// Alias for [vec3]
+	Vec3 get v3 => vec3();
 
   /// Construct a Vec4 with all members set to this value.
   Vec4 vec4() => Vec4.of([this, this, this, this]);

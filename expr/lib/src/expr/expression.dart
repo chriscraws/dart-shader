@@ -10,6 +10,13 @@ abstract class Expression {
   Expression _construct(Evaluable node);
 }
 
+extension NumExpression on num {
+  Scalar get s => Scalar(this.toDouble());
+  Vec2 get v2 => Vec2.all(this.toDouble());
+  Vec3 get v3 => Vec3.all(this.toDouble());
+  Vec4 get v4 => Vec4.all(this.toDouble());
+}
+
 // experimenting with alternate api for functions that don't
 // feel like methods
 

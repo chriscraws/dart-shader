@@ -13,15 +13,18 @@ class Vec2 extends Expression with Vec2OrScalar {
     return Vec2._(node);
   }
 
+  /// Construct from existing [Scalar] expressions.
+  Vec2(Scalar x, Scalar y)
+      : super._(OpCompositeConstruct.vec2([x._node, y._node]));
+
   /// Construct a constant Vec2 with value [x, y].
-  Vec2(double x, double y) : super._(OpConstantComposite.vec2(x, y));
+  Vec2.constant(double x, double y) : super._(OpConstantComposite.vec2(x, y));
 
   /// Construct a constant Vec2 with value [x, x].
+  ///
+  /// Use the v2 accessor on an existing [Scalar] for the same
+  /// purpose.
   Vec2.all(double x) : super._(OpConstantComposite.vec2(x, x));
-
-  /// Construct from existing [Scalar] expressions.
-  Vec2.of(Scalar x, Scalar y)
-      : super._(OpCompositeConstruct.vec2([x._node, y._node]));
 
   /// Return the inverse tangent of `x / y`.
   static Vec2 aTan2(Vec2 x, Vec2 y) => Vec2._(ATan2(x._node, y._node));

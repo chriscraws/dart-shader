@@ -40,10 +40,10 @@ class TestShader extends Shader {
   Vec4 color(Vec2 position) {
     final uv = (position / resolution - Vec2.all(0.5)) * Scalar(2);
 
-    final ax = sin(Scalar(5.0) * uv.x + time);
-    final ay = sin(uv.y + Scalar(0.2) * time);
+    final ax = sin(5.s * uv.x + time);
+    final ay = sin(uv.y + .2.s * time);
 
-    final mixAmt = Vec4.of([ax, ay, ax, ay]);
+    final mixAmt = Vec4(ax, ay, ax, ay);
 
     final c = mixAmt
         .mix(
@@ -73,7 +73,7 @@ class UniformShader extends Shader {
 
 void main() {
   test('simple shader', () async {
-    final shader = ColorShader(Vec4(0, 0.25, 0.75, 1.0));
+    final shader = ColorShader(Vec4.constant(0, 0.25, 0.75, 1.0));
     await matchGolden(shader.toSPIRV(), 'simple.golden');
   });
 
@@ -102,11 +102,11 @@ void main() {
   });
 
   test('vec2 ops', () async {
-    final a = Vec2(1.0, 0.25);
-    final b = Vec2(1, 1);
+    final a = Vec2.constant(1.0, 0.25);
+    final b = Vec2.constant(1, 1);
     final c = Vec2Uniform()..value = vm.Vector2(6, 7);
 
-    Vec2 vec2 = (b * Scalar(2) + (a * -b) / a) % Vec2(1.5, 1.5);
+    Vec2 vec2 = (b * Scalar(2) + (a * -b) / a) % Vec2.constant(1.5, 1.5);
     vec2 *= c;
 
     final color = Vec4.of([vec2, vec2]);
@@ -122,11 +122,11 @@ void main() {
   });
 
   test('vec3 ops', () async {
-    final a = Vec3(1.0, 0.25, 0.75);
-    final b = Vec3(1, 1, 1);
+    final a = Vec3.constant(1.0, 0.25, 0.75);
+    final b = Vec3.constant(1, 1, 1);
     final c = Vec3Uniform()..value = vm.Vector3(6, 7, 8);
 
-    final vec3 = ((b * Scalar(2) + (a * -b) / a) % Vec3(1.5, 1.5, 1.5)) * c;
+    final vec3 = ((b * Scalar(2) + (a * -b) / a) % 1.5.v3) * c;
 
     final color = Vec4.of([vec3, Scalar(1.0)]);
 
@@ -142,12 +142,11 @@ void main() {
   });
 
   test('vec4 ops', () async {
-    final a = Vec4(1.0, 0.25, 0.75, 1.0);
-    final b = Vec4(1, 1, 1, 1);
+    final a = Vec4.constant(1.0, 0.25, 0.75, 1.0);
+    final b = Vec4.constant(1, 1, 1, 1);
     final c = Vec4Uniform()..value = vm.Vector4(2, 3, 4, 5);
 
-    final color =
-        ((b * Scalar(2) + (a * -b) / a) % Vec4(1.5, 1.5, 1.5, 1.5)) * c;
+    final color = ((b * 2.s + (a * -b) / a) % 1.5.v4) * c;
 
     final shader = ColorShader(color);
     await matchGolden(shader.toSPIRV(), 'vec4op.golden');
@@ -162,9 +161,9 @@ void main() {
   });
 
   test('glsl ops', () async {
-    final a = Vec3(1.0, 1.0, 1.0);
-    final b = Vec3(0.5, 0.5, 0.5);
-    final c = Vec3(2.0, 2.0, 2.0);
+    final a = 1.v3;
+    final b = 0.5.v3;
+    final c = 2.v3;
 
     final out = a
         .abs()
@@ -220,7 +219,7 @@ void main() {
     final shader = UniformShader();
     final expectedSize = 1 + 2 + 3 + 4; // scalar, vec2, vec3, vec4
     Float32List output = Float32List(expectedSize);
-    shader.writeUniformData(output);
+    shader.writeUniformData((i, v) => output[i] = v);
 
     // expect all zeroes
     for (final v in output) {
@@ -234,7 +233,7 @@ void main() {
     shader.vec4.value = vm.Vector4(1, 2, 3, 4);
 
     // re-write values to buffer
-    shader.writeUniformData(output);
+    shader.writeUniformData((i, v) => output[i] = v);
 
     // expect correct values - this ordering may be brittle with library changes.
     final expected = [1, 2, 3, 4, 10, 8, 9, 5, 6, 7];

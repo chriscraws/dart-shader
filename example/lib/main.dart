@@ -125,10 +125,10 @@ class MainShader extends Shader {
 
   Vec4 color(Vec2 position) {
     final aspect = resolution.x / resolution.y;
-    Vec2 p = position / resolution.x.v2 - Vec2.of(0.5.s, 0.5.s / aspect);
+    Vec2 p = position / resolution.x.v2 - Vec2(0.5.s, 0.5.s / aspect);
 
     p -= circlePos;
-    p += Vec2.of(0.s, 0.03.s * sin(time + 30.s * p.y));
+    p += Vec2(0.s, 0.03.s * sin(time + 30.s * p.y));
 
     final pixel = 1.s / resolution.x;
     final b = dcircle(p, 0.13.s).smoothStep(0.0.s, pixel);
@@ -137,11 +137,6 @@ class MainShader extends Shader {
       1.s,
     ]);
   }
-}
-
-extension E on num {
-  Scalar get s => Scalar(this.toDouble());
-  Vec2 get v2 => Vec2.all(this.toDouble());
 }
 
 class ShaderPainter extends CustomPainter {

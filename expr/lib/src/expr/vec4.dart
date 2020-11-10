@@ -13,8 +13,13 @@ class Vec4 extends Expression with Vec4OrScalar {
     return Vec4._(node);
   }
 
+  /// Construct a Vec4 from four [Scalar] objects.
+  Vec4(Scalar x, Scalar y, Scalar z, Scalar w)
+      : super._(
+            OpCompositeConstruct.vec4([x._node, y._node, z._node, w._node]));
+
   /// Construct a constant Vec4 with value [x, y, z, w].
-  Vec4(double x, double y, double z, double w)
+  Vec4.constant(double x, double y, double z, double w)
       : super._(OpConstantComposite.vec4(x, y, z, w));
 
   /// Construct a constant Vec4 with value [x, x, x, x].

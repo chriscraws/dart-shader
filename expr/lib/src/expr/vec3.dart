@@ -13,8 +13,12 @@ class Vec3 extends Expression with Vec3OrScalar {
     return Vec3._(node);
   }
 
+  /// Construct a Vec3 from three [Scalar] objects.
+  Vec3(Scalar x, Scalar y, Scalar z)
+      : super._(OpCompositeConstruct.vec3([x._node, y._node, z._node]));
+
   /// Construct a constant Vec3 with value [x, y].
-  Vec3(double x, double y, double z)
+  Vec3.constant(double x, double y, double z)
       : super._(OpConstantComposite.vec3(x, y, z));
 
   /// Construct a constant Vec3 with value [x, x].

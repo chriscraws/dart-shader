@@ -12,19 +12,22 @@ class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   Scalar(double x) : super._(OpConstant(x));
 
   /// Construct a Vec2 with all members set to this value.
-  Vec2 vec2() => Vec2.of(this, this);
+  Vec2 vec2() => Vec2(this, this);
 
-	/// Alias for [vec2]
-	Vec2 get v2 => vec2();
+  /// Alias for [vec2]
+  Vec2 get v2 => vec2();
 
   /// Construct a Vec3 with all members set to this value.
-  Vec3 vec3() => Vec3.of([this, this, this]);
+  Vec3 vec3() => Vec3(this, this, this);
 
-	/// Alias for [vec3]
-	Vec3 get v3 => vec3();
+  /// Alias for [vec3]
+  Vec3 get v3 => vec3();
 
   /// Construct a Vec4 with all members set to this value.
-  Vec4 vec4() => Vec4.of([this, this, this, this]);
+  Vec4 vec4() => Vec4(this, this, this, this);
+
+  /// Alias for [vec4];
+  Vec4 get v4 => vec4();
 
   /// Return the inverse tangent of `x / y`.
   static Scalar aTan2(Scalar x, Scalar y) => Scalar._(ATan2(x._node, y._node));

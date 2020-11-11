@@ -39,8 +39,16 @@ class ImageDemoShader extends TimeAndResolutionShader {
 
   @override
   Vec4 color(Vec2 position) {
-//    return Vec4.of([image.sample(position).xy, Vec2.of(0.5.s, 1.s)]);
-    return sampler.sample(position);
+    // TODO: Missing op 79.
+//    return Vec4.of([sampler.sample(position).xy, Vec2.of(0.5.s, 1.s)]);
+    final uv = position / resolution * Vec2.of(uiImage.width.s, uiImage.height.s);
+    return Vec4.of([
+      sampler.sample(uv).x,
+      sampler.sample(uv).y,
+      0.5.s,
+      0.5.s,
+    ]);
+//    return sampler.sample(position);
   }
 }
 

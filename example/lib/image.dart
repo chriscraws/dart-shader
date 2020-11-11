@@ -24,26 +24,22 @@ class ImageDemoPage extends StatelessWidget {
 }
 
 class ImageDemoShader extends TimeAndResolutionShader {
-  ImageDemoShader(this.uiImage) : this.sampler = Sampler(uiImage);
+  ImageDemoShader(this.image) : this.sampler = Sampler(image);
 
-  final ui.Image uiImage;
+  final ui.Image image;
   final Sampler sampler;
 
   @override
-  List<ui.Image> children() => [uiImage];
+  List<ui.Image> children() => [image];
 
   @override
   Vec4 color(Vec2 position) {
+    Vec2 uv = position / resolution * Vec2(image.width.s, image.height.s);
+    uv += Vec2(sin(uv.y / 100.s + time) * 25.s, 0.s);
+    return sampler.sample(uv);
+
     // TODO: [ERROR:flutter/lib/ui/painting/fragment_shader.cc(53)] Invalid SPIR-V: Unsupported OP: 79
-//    return Vec4.of([sampler.sample(position).xy, Vec2(0.5.s, 1.s)]);
-    Vec2 uv = position / resolution * Vec2(uiImage.width.s, uiImage.height.s);
-    uv += Vec2(((uv.y / 3.s + time)).sin(), 0.s);
-    return Vec4.of([
-      sampler.sample(uv).x,
-      sampler.sample(uv).y,
-      0.5.s,
-      0.5.s,
-    ]);
+    // return Vec4.of([sampler.sample(position).xy, Vec2(0.5.s, 1.s)]);
   }
 }
 

@@ -16,7 +16,7 @@ class ImageDemoPage extends StatelessWidget {
       body: Center(
         child: SingleImageShader(
           shaderProvider: (image) => ImageDemoShader(image),
-          assetPath: 'images/city_300x300.png',
+          assetPath: 'images/city2.jpg',
         ),
       ),
     );

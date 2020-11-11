@@ -41,7 +41,8 @@ class ImageDemoShader extends TimeAndResolutionShader {
   Vec4 color(Vec2 position) {
     // TODO: Missing op 79.
 //    return Vec4.of([sampler.sample(position).xy, Vec2.of(0.5.s, 1.s)]);
-    final uv = position / resolution * Vec2.of(uiImage.width.s, uiImage.height.s);
+    Vec2 uv = position / resolution * Vec2.of(uiImage.width.s, uiImage.height.s);
+    uv += Vec2.of(((uv.y / 3.s + time)).sin(), 0.s);
     return Vec4.of([
       sampler.sample(uv).x,
       sampler.sample(uv).y,

@@ -51,7 +51,7 @@ class Warp extends Shader {
 
   Vec4 color(Vec2 position) {
     Vec2 uv = position / resolution;
-    uv += Vec2.all(0.2) * sin(Vec2.of(Scalar(10) * uv.y, Scalar(0)));
+    uv += Vec2.all(0.2) * sin(Vec2(Scalar(10) * uv.y, Scalar(0)));
     final sampled = image.sample(uv);
     return sampled.zxyw;
   }

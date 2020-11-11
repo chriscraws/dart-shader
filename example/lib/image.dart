@@ -9,11 +9,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:expr/expr.dart';
 
-extension E on num {
-  Scalar get s => Scalar(this.toDouble());
-  Vec2 get v2 => Vec2.all(this.toDouble());
-}
-
 class ImageDemoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -39,17 +34,16 @@ class ImageDemoShader extends TimeAndResolutionShader {
 
   @override
   Vec4 color(Vec2 position) {
-    // TODO: Missing op 79.
-//    return Vec4.of([sampler.sample(position).xy, Vec2.of(0.5.s, 1.s)]);
-    Vec2 uv = position / resolution * Vec2.of(uiImage.width.s, uiImage.height.s);
-    uv += Vec2.of(((uv.y / 3.s + time)).sin(), 0.s);
+    // TODO: [ERROR:flutter/lib/ui/painting/fragment_shader.cc(53)] Invalid SPIR-V: Unsupported OP: 79
+//    return Vec4.of([sampler.sample(position).xy, Vec2(0.5.s, 1.s)]);
+    Vec2 uv = position / resolution * Vec2(uiImage.width.s, uiImage.height.s);
+    uv += Vec2(((uv.y / 3.s + time)).sin(), 0.s);
     return Vec4.of([
       sampler.sample(uv).x,
       sampler.sample(uv).y,
       0.5.s,
       0.5.s,
     ]);
-//    return sampler.sample(position);
   }
 }
 

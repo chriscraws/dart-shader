@@ -6,11 +6,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:expr/expr.dart';
 
-extension E on num {
-  Scalar get s => Scalar(this.toDouble());
-  Vec2 get v2 => Vec2.all(this.toDouble());
-}
-
 class SimpleDemoPage extends StatefulWidget {
   SimpleDemoPage({Key key, this.title}) : super(key: key);
 
@@ -95,17 +90,15 @@ class MainShader extends Shader {
 
   Vec4 color(Vec2 position) {
     final aspect = resolution.x / resolution.y;
-    Vec2 p = position / resolution.x.v2 - Vec2.of(0.5.s, 0.5.s / aspect);
+    Vec2 p = position / resolution.x.v2 - Vec2(0.5.s, 0.5.s / aspect);
 
     p -= circlePos;
-    p += Vec2.of(0.s, 0.03.s * (time + 30.s * p.y).sin());
+    p += Vec2(0.s, 0.03.s * sin(time + 30.s * p.y));
 
     final pixel = 1.s / resolution.x;
     final b = dcircle(p, 0.13.s).smoothStep(0.0.s, pixel);
     return Vec4.of([
-      b,
-      b / 2.s,
-      b.asin(),
+      b.v3,
       1.s,
     ]);
   }

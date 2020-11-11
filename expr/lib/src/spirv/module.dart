@@ -123,7 +123,10 @@ class Module extends Identifier {
     // declare imported functions
     for (int i = 0; i < importedFunctions.length; i++) {
       instructions.add(importedFunctions[i]);
-      instructions.add(OpFunctionEnd());
+      // This incorrectly adds a `}` to an `in shader s0;` line:
+      // instructions.add(OpFunctionEnd());
+      // TODO: Figure out how to not write a `}` after writing `in shader`,
+      // without breaking imported functions.
     }
 
     // add function declaration opening

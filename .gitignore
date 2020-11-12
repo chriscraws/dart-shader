@@ -1,2 +1,5 @@
 bazel-*
 .vscode
+.dart_tool
+.idea
+.packages

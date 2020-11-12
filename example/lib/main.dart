@@ -38,7 +38,7 @@ class _Home extends StatelessWidget {
           itemBuilder: (context, i) => _DemoTile(demos[i]),
           itemCount: demos.length,
         ),
-      ) ,
+      ),
     );
   }
 }
@@ -67,4 +67,3 @@ class _DemoTile extends StatelessWidget {
     );
   }
 }
-

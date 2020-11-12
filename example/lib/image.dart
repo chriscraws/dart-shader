@@ -30,7 +30,14 @@ class ImageDemoShader extends TimeAndResolutionShader {
   final Sampler sampler;
 
   @override
-  List<ui.Image> children() => [image];
+  List<ui.Shader> children() => [
+        ui.ImageShader(
+          image,
+          ui.TileMode.repeated, // tmx
+          ui.TileMode.repeated, // tmy
+          Matrix4.identity().storage, // matrix
+        ),
+      ];
 
   @override
   Vec4 color(Vec2 position) {
@@ -46,7 +53,7 @@ class ImageDemoShader extends TimeAndResolutionShader {
 abstract class TimeAndResolutionShader extends Shader {
   final time = ScalarUniform();
   final resolution = Vec2Uniform();
-  List<ui.Image> children() => [];
+  List<ui.Shader> children() => [];
 }
 
 typedef TimeAndResolutionShader TimeAndResolutionAndImageShaderProvider(image);
@@ -105,14 +112,14 @@ class _SingleImageShaderState extends State<SingleImageShader> {
     return _shader == null
         ? Container()
         : Center(
-      child: CustomPaint(
-        painter: SingleImageShaderPainter(
-          ssirShader: _shader,
-          repaint: notifier,
-        ),
-        size: Size.infinite,
-      ),
-    );
+            child: CustomPaint(
+              painter: SingleImageShaderPainter(
+                ssirShader: _shader,
+                repaint: notifier,
+              ),
+              size: Size.infinite,
+            ),
+          );
   }
 }
 
@@ -126,7 +133,7 @@ class SingleImageShaderPainter extends CustomPainter {
     this.ssirShader,
     this.repaint,
   })  : _shader = ui.FragmentShader.spirv(
-      ssirShader.toSPIRV().asUint8List(), ssirShader.children()),
+            ssirShader.toSPIRV().asUint8List(), ssirShader.children()),
         _resolution = ssirShader.resolution,
         super(repaint: repaint);
 

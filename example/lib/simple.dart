@@ -16,7 +16,8 @@ class SimpleDemoPage extends StatefulWidget {
   _SimpleDemoPageState createState() => _SimpleDemoPageState();
 }
 
-class _SimpleDemoPageState extends State<SimpleDemoPage> with TickerProviderStateMixin {
+class _SimpleDemoPageState extends State<SimpleDemoPage>
+    with TickerProviderStateMixin {
   final notifier = ChangeNotifier();
   Ticker ticker;
   AnimationController _controller;

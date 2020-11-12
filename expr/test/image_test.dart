@@ -1,8 +1,8 @@
-import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
+import 'dart:ui' as ui;
 
 import 'package:expr/expr.dart';
+import 'package:expr/image_sampler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart' as vm;
@@ -10,9 +10,9 @@ import 'package:vector_math/vector_math.dart' as vm;
 void main() {
   test('make png', () async {
     final pngBytes = File('logo_flutter_1080px_clr.png').readAsBytesSync();
-    final codec = await instantiateImageCodec(pngBytes);
+    final codec = await ui.instantiateImageCodec(pngBytes);
     final frame = await codec.getNextFrame();
-    final sampler = Sampler(frame.image);
+    final sampler = ImageSampler(frame.image);
     await sampler.ready;
     final shader = Warp(
       image: sampler,

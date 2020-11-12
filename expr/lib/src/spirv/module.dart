@@ -11,14 +11,15 @@ final _version = 0x00010500;
 
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
-class Module extends Identifier {
+///
+class Module<T> extends Identifier {
   // fragment position
   static final position = OpFunctionParameter(vec2T);
 
   final _ids = <Instruction, int>{};
   final _constants = <Instruction>{};
   final _uniforms = <OpVariable>[];
-  int _expectedUniformBufferSize = 0;
+  final _children = <T>[];
 
   int _bound = 0;
   Instruction _color;
@@ -50,6 +51,8 @@ class Module extends Identifier {
     assert(vec4.type == vec4T);
     _color = vec4;
   }
+
+  List<T> get children => List<T>.unmodifiable(_children);
 
   void writeUniformData(void Function(int, double) setter) {
     int i = 0;
@@ -97,13 +100,21 @@ class Module extends Identifier {
     );
 
     // decorate all imported functions
-    final importedFunctions =
-        sortedMap.values.where((i) => i.isFunction && i != main).toList();
+    final importedFunctions = sortedMap.values
+        .whereType<ShaderFunction<T>>()
+        .where((f) => f != main)
+        .toList();
+    if (importedFunctions.length !=
+        sortedMap.values.where((v) => v.isFunction && v != main).length) {
+      throw ('shader contains sampler with an unknown source type');
+    }
     for (int i = 0; i < importedFunctions.length; i++) {
+      final fun = importedFunctions[i];
       instructions.add(OpDecorate.import(
-        function: importedFunctions[i],
+        function: fun,
         name: 's${i + 10 - 10}',
       ));
+      _children.add(fun.source);
     }
 
     // add type declarations
@@ -116,17 +127,11 @@ class Module extends Identifier {
     _uniforms.addAll(sortedMap.values
         .where((i) => i is OpVariable)
         .map((i) => i as OpVariable));
-    for (final uniform in _uniforms) {
-      _expectedUniformBufferSize += uniform.objectType.elementCount;
-    }
 
     // declare imported functions
     for (int i = 0; i < importedFunctions.length; i++) {
       instructions.add(importedFunctions[i]);
-      // This incorrectly adds a `}` to an `in shader s0;` line:
-      // instructions.add(OpFunctionEnd());
-      // TODO: Figure out how to not write a `}` after writing `in shader`,
-      // without breaking imported functions.
+      instructions.add(OpFunctionEnd());
     }
 
     // add function declaration opening

@@ -218,15 +218,20 @@ class OpFunction extends Instruction {
       ];
 }
 
-class ShaderFunction extends OpFunction {
+abstract class ExternalSampler {
+  double evaluate(double x, double y, int channel);
+}
+
+class ShaderFunction<T> extends OpFunction {
   static final _type = OpTypeFunction(
     returnType: vec4T,
     paramTypes: [vec2T],
   );
 
-  final void Function(double x, double y, List<double> result) evaluator;
+  final T source;
+  final ExternalSampler sampler;
 
-  ShaderFunction([this.evaluator]) : super._(_type);
+  ShaderFunction([this.sampler, this.source]) : super._(_type);
 
   OpFunctionCall call(Evaluable pos) {
     assert(pos.type == vec2T);
@@ -238,7 +243,7 @@ class ShaderFunction extends OpFunction {
   }
 
   void _evaluate(List<Evaluable> params, List<double> result) {
-    if (evaluator == null) {
+    if (sampler == null) {
       return;
     }
 
@@ -246,7 +251,9 @@ class ShaderFunction extends OpFunction {
     assert(result.length == 4);
     final pos = params[0];
     pos.evaluate();
-    evaluator(pos.value[0], pos.value[1], result);
+    for (int i = 0; i < 4; i++) {
+      result[i] = sampler.evaluate(pos.value[0], pos.value[1], i);
+    }
   }
 }
 

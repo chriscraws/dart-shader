@@ -2,15 +2,16 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:expr/expr.dart';
+import 'package:expr/image_sampler.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// If true, overwrites all the golen files. If you run the tests with this
 /// set to true, be sure to use `spirv-val` to validate all files matching
 /// `test/*.golden`. Then set this back to false.
-final overwriteGoldens = false;
+final overwriteGoldens = true;
 
 Future<void> matchGolden(ByteBuffer item, String filename) async {
   assert(filename != null);
@@ -18,6 +19,7 @@ Future<void> matchGolden(ByteBuffer item, String filename) async {
   if (overwriteGoldens) {
     await file.writeAsBytes(item.asUint8List(), flush: true);
   }
+  print("testing '$filename'");
   expect(item.asUint8List(), equals(await file.readAsBytes()));
 }
 
@@ -29,13 +31,13 @@ class ColorShader extends Shader {
   Vec4 color(Vec2 position) => out;
 }
 
-class TestShader extends Shader {
-  TestShader(Image img) : image = Sampler(img);
+class TestShader extends Shader<ui.Shader> {
+  TestShader(ui.Image img) : image = ImageSampler(img);
   final time = ScalarUniform();
   final resolution = Vec2Uniform();
   final background = Vec3Uniform();
   final foreground = Vec4Uniform();
-  final Sampler image;
+  final ImageSampler image;
 
   Vec4 color(Vec2 position) {
     final uv = (position / resolution - Vec2.all(0.5)) * Scalar(2);
@@ -79,7 +81,7 @@ void main() {
 
   test('test shader', () async {
     final pngBytes = File('logo_flutter_1080px_clr.png').readAsBytesSync();
-    final codec = await instantiateImageCodec(pngBytes);
+    final codec = await ui.instantiateImageCodec(pngBytes);
     final frame = await codec.getNextFrame();
     final shader = TestShader(frame.image);
     await matchGolden(shader.toSPIRV(), 'test_shader.golden');

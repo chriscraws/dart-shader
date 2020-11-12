@@ -1,3 +1,4 @@
+// TODO: move outside of expr because of dependency on dart UI
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -8,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:expr/expr.dart';
+import 'package:expr/image_sampler.dart';
 
 class ImageDemoPage extends StatelessWidget {
   @override
@@ -24,20 +26,10 @@ class ImageDemoPage extends StatelessWidget {
 }
 
 class ImageDemoShader extends TimeAndResolutionShader {
-  ImageDemoShader(this.image) : this.sampler = Sampler(image);
+  ImageDemoShader(this.image) : this.sampler = ImageSampler(image);
 
   final ui.Image image;
-  final Sampler sampler;
-
-  @override
-  List<ui.Shader> children() => [
-        ui.ImageShader(
-          image,
-          ui.TileMode.repeated, // tmx
-          ui.TileMode.repeated, // tmy
-          Matrix4.identity().storage, // matrix
-        ),
-      ];
+  final ImageSampler sampler;
 
   @override
   Vec4 color(Vec2 position) {
@@ -50,10 +42,9 @@ class ImageDemoShader extends TimeAndResolutionShader {
   }
 }
 
-abstract class TimeAndResolutionShader extends Shader {
+abstract class TimeAndResolutionShader extends Shader<ui.Shader> {
   final time = ScalarUniform();
   final resolution = Vec2Uniform();
-  List<ui.Shader> children() => [];
 }
 
 typedef TimeAndResolutionShader TimeAndResolutionAndImageShaderProvider(image);
@@ -133,7 +124,7 @@ class SingleImageShaderPainter extends CustomPainter {
     this.ssirShader,
     this.repaint,
   })  : _shader = ui.FragmentShader.spirv(
-            ssirShader.toSPIRV().asUint8List(), ssirShader.children()),
+            ssirShader.toSPIRV().asUint8List(), ssirShader.children),
         _resolution = ssirShader.resolution,
         super(repaint: repaint);
 

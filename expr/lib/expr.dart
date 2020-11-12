@@ -8,7 +8,6 @@ library expr;
 
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:vector_math/vector_math.dart' as vm;
 

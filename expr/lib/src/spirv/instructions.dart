@@ -547,7 +547,8 @@ class OpFDot extends Instruction with Evaluable {
   final List<Evaluable> deps;
 
   OpFDot(this.a, this.b)
-      : assert(a.type == b.type),
+      : assert(a.type != floatT),
+        assert(a.type == b.type),
         deps = [a, b],
         super(
           type: floatT,
@@ -559,6 +560,11 @@ class OpFDot extends Instruction with Evaluable {
       (_) => 0,
     ));
   }
+
+  List<int> operands(Identifier i) => [
+    i.identify(a),
+    i.identify(b),
+  ];
 
   void evaluate() {
     a.evaluate();

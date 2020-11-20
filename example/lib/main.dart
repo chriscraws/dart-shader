@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'image.dart';
 import 'simple.dart';
+import 'touch.dart';
 
 void main() {
   runApp(DemoApp());
@@ -28,6 +29,10 @@ class _Home extends StatelessWidget {
     _DemoTileData(
       title: 'Image',
       builder: (_) => ImageDemoPage(),
+    ),
+    _DemoTileData(
+      title: 'Touch',
+      builder: (_) => TouchInteraction(),
     ),
   ];
   @override

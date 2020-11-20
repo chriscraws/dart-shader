@@ -562,9 +562,9 @@ class OpFDot extends Instruction with Evaluable {
   }
 
   List<int> operands(Identifier i) => [
-    i.identify(a),
-    i.identify(b),
-  ];
+        i.identify(a),
+        i.identify(b),
+      ];
 
   void evaluate() {
     a.evaluate();

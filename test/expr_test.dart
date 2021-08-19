@@ -4,8 +4,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:expr/expr.dart';
-import 'package:expr/image_sampler.dart';
+import 'package:shader/shader.dart';
+import 'package:shader/image_sampler.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// If true, overwrites all the golen files. If you run the tests with this

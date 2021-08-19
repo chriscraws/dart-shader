@@ -1,3 +1,5 @@
 # dart-shader
 
-Dart libarary for creating shaders that can be evaluated in Dart or compiled to SPIR-V.
+This library is under development, not ready for use.
+
+Intended to support writing fragment shaders for Flutter, in Dart.

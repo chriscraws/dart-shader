@@ -1,3 +1,3 @@
-# expr
+# dart-shader
 
-Dart libarary for composing expressions that can be evaluated in Dart or compiled to SPIR-V.
+Dart libarary for creating shaders that can be evaluated in Dart or compiled to SPIR-V.

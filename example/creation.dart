@@ -8,7 +8,7 @@
 
 import 'dart:io';
 
-import 'package:expr/expr.dart';
+import 'package:shader/shader.dart';
 import 'package:image/image.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 

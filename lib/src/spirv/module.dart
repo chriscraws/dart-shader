@@ -54,15 +54,20 @@ class Module<T> extends Identifier {
 
   List<T> get children => List<T>.unmodifiable(_children);
 
-  void writeUniformData(void Function(int, double) setter) {
-    int i = 0;
+  List<double> get uniformData {
+    int size = 0;
     for (final uniform in _uniforms) {
-      final value = uniform.variable;
-      for (int ui = 0; ui < value.length; ui++) {
-        setter(i, value[ui]);
+      size += uniform.variable.length;
+    }
+    int i = 0;
+    List<double> values = List<double>(size);
+    for (final uniform in _uniforms) {
+      for (int ui = 0; ui < uniform.variable.length; ui++) {
+        values[i] = uniform.variable[ui];
         i++;
       }
     }
+    return values;
   }
 
   // Encode the module to binary SPIR-V.

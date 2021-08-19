@@ -1,4 +1,4 @@
-name: expr
+name: shader
 description: Library for writing shaders in Dart.
 version: 0.0.1
 author:
@@ -19,9 +19,7 @@ dev_dependencies:
 
 dependency_overrides:
   sky_engine:
-    path: ../../engine/src/out/host_debug_unopt/gen/dart-pkg/sky_engine
-  sky_services:
-    path: ../../engine/src/out/host_debug_unopt/gen/dart-pkg/sky_services
+    path: ../engine/src/out/host_debug_unopt/gen/dart-pkg/sky_engine
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

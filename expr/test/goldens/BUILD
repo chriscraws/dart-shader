@@ -1,9 +1,0 @@
-exports_files([
-  "glslop.golden",
-  "simple.golden",
-  "scalar.golden",
-  "vec2op.golden",
-  "vec3op.golden",
-  "vec4op.golden",
-  "test_shader.golden",
-])

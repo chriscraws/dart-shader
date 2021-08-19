@@ -1,6 +1,3 @@
-# ssir
-simple shader intermediate representation
+# expr
 
-SSIR is a subset of SPIR-V for fragment shaders, intended for use in [Flutter](https://flutter.dev).
-
-Design is documented [here](https://docs.google.com/document/d/1z9K5LernwQ0LVAzfbAMW6ITx63QRdRsoax1NLYEfm4Y).
+Dart libarary for composing expressions that can be evaluated in Dart or compiled to SPIR-V.

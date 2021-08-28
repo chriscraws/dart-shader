@@ -7,7 +7,7 @@ import 'dart:typed_data';
 abstract class Identifier {
   /// Assign an ID to an Instruction, and return it. If
   /// an ID is already assigned, return that.
-  int/*!*/ identify(Instruction/*!*/ inst);
+  int identify(Instruction inst);
 }
 
 /// It's helpful to identify types statically.
@@ -17,7 +17,7 @@ mixin Type on Instruction {
 
 /// Instructions that can evaluate to a value.
 mixin Evaluable on Instruction {
-  final List<double/*!*/> value = <double/*!*/>[];
+  final List<double> value = <double>[];
   void evaluate();
 }
 
@@ -26,13 +26,13 @@ mixin Evaluable on Instruction {
 /// optionally assigned an identifier.
 abstract class Instruction {
   /// Optional type for the instruction.
-  final Type type;
+  final Type? type;
 
   /// True if this instruction provides a result.
   final bool result;
 
   /// SPIR-V code for the instruction.
-  final int/*!*/ opCode;
+  final int opCode;
 
   // True if this instruction is a variable or constant declaration.
   final bool isDeclaration;
@@ -47,14 +47,14 @@ abstract class Instruction {
   final bool isFunction;
 
   // Null if not a constant, otherwise, the constant value.
-  final double constant;
+  final double? constant;
 
   // Null if not a variable, otherwise the variable value.
   // Must have length equal to [type.elementCount].
-  Float32List get variable => null;
+  Float32List? get variable => null;
 
   const Instruction({
-    this.opCode,
+    required this.opCode,
     this.type,
     this.constant,
     this.result = false,
@@ -69,7 +69,7 @@ abstract class Instruction {
   /// Identifier.
   void resolve(Identifier i) {
     if (type != null) {
-      type.resolve(i);
+      type!.resolve(i);
     }
     for (final dep in deps) {
       dep.resolve(i);
@@ -81,18 +81,18 @@ abstract class Instruction {
 
   /// Encode the word-stream of operands for this Instruction.
   /// This method should be overwridden by subclasses.
-  List<int/*!*/> operands(Identifier i) => [];
+  List<int> operands(Identifier i) => [];
 
   /// Encode the full word-stream for the entire instruction.
   /// This method should not be overridden.
-  List<int/*!*/> encode(Identifier i) {
+  List<int> encode(Identifier i) {
     final ops = operands(i);
     int wordCount = ops.length + 1;
     if (type != null) wordCount++;
     if (result) wordCount++;
     return <int>[
       wordCount << 16 | opCode,
-      if (type != null) i.identify(type),
+      if (type != null) i.identify(type!),
       if (result) i.identify(this),
       ...ops,
     ];
@@ -101,5 +101,5 @@ abstract class Instruction {
   /// Returns any Instructions that return results and need
   /// to be defined before this Instruction. This should be
   /// overriden by subclasses.
-  List<Instruction>/*!*/ get deps => [];
+  List<Instruction> get deps => [];
 }

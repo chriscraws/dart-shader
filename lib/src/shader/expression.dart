@@ -21,29 +21,29 @@ extension NumExpression on num {
 // feel like methods
 
 T sin<T extends Expression>(T val) {
-  return val._construct(Sin(val._node));
+  return val._construct(Sin(val._node)) as T;
 }
 
 T cos<T extends Expression>(T val) {
-  return val._construct(Cos(val._node));
+  return val._construct(Cos(val._node)) as T;
 }
 
 T tan<T extends Expression>(T val) {
-  return val._construct(Tan(val._node));
+  return val._construct(Tan(val._node)) as T;
 }
 
 T asin<T extends Expression>(T val) {
-  return val._construct(ASin(val._node));
+  return val._construct(ASin(val._node)) as T;
 }
 
 T acos<T extends Expression>(T val) {
-  return val._construct(ACos(val._node));
+  return val._construct(ACos(val._node)) as T;
 }
 
 T atan<T extends Expression>(T val) {
-  return val._construct(ATan(val._node));
+  return val._construct(ATan(val._node)) as T;
 }
 
 T pow<T extends Expression>(T x, T y) {
-  return x._construct(Pow(x._node, y._node));
+  return x._construct(Pow(x._node, y._node)) as T;
 }

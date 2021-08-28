@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'instruction.dart';
 import 'instructions.dart';
+import 'package:collection/collection.dart' show IterableExtension;
 
 final _magicNumber = 0x07230203;
 final _version = 0x00010500;
@@ -21,21 +22,20 @@ class Module extends Identifier {
   final _uniforms = <OpVariable>[];
 
   int _bound = 0;
-  Instruction _color;
+  late Instruction _color;
 
   @override
   int identify(Instruction inst) {
     if (_ids.containsKey(inst)) {
-      return _ids[inst];
+      return _ids[inst]!;
     }
 
     if (inst.constant != null) {
-      final constant = _constants.singleWhere(
+      final constant = _constants.singleWhereOrNull(
         (c) => c.constant == inst.constant,
-        orElse: () => null,
       );
       if (constant != null) {
-        return _ids[constant];
+        return _ids[constant]!;
       }
       _constants.add(inst);
     }

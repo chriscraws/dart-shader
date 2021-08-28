@@ -19,7 +19,7 @@ void main() {
     final img = shader.draw(t);
     animate.addFrame(img);
   }
-  File('creation.gif')..writeAsBytesSync(encodeGifAnimation(animate));
+  File('creation.gif')..writeAsBytesSync(encodeGifAnimation(animate)!);
   File('creation.spv')..writeAsBytesSync(shader.toSPIRV().asUint8List());
 }
 

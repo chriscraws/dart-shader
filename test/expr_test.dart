@@ -11,7 +11,6 @@ import 'package:vector_math/vector_math.dart' as vm;
 final overwriteGoldens = false;
 
 Future<void> matchGolden(ByteBuffer item, String filename) async {
-  assert(filename != null);
   final file = File('test/goldens/' + filename);
   if (overwriteGoldens) {
     await file.writeAsBytes(item.asUint8List(), flush: true);
@@ -210,7 +209,6 @@ void main() {
 
   test('writes uniform data', () {
     final shader = UniformShader();
-    final expectedSize = 1 + 2 + 3 + 4; // scalar, vec2, vec3, vec4
     List<double> output = shader.packUniformValues();
 
     // expect all zeroes

@@ -156,7 +156,7 @@ class Log extends _UniOp {
 class Exp2 extends _UniOp {
   Exp2(Evaluable a) : super(_exp2, a);
 
-  double _op(double x) => pow(2, x);
+  double _op(double x) => pow(2, x) as double;
 }
 
 class Log2 extends _UniOp {
@@ -223,7 +223,7 @@ class ATan2 extends _BinOp {
 class Pow extends _BinOp {
   Pow(Evaluable a, Evaluable b) : super(_pow, a, b);
 
-  double _op(double x, double y) => pow(x, y);
+  double _op(double x, double y) => pow(x, y) as double;
 }
 
 class FMin extends _BinOp {
@@ -284,7 +284,7 @@ class Distance extends OpExtInst {
 
   // prevents allocation inside evaluate, should be as large
   // as the largest numerical type.
-  static final _diff = List<double>(vec4T.elementCount);
+  static final _diff = List<double>.filled(vec4T.elementCount, 0);
 
   void evaluate() {
     final a = deps[0]..evaluate();
@@ -327,10 +327,10 @@ class Reflect extends OpExtInst {
   }
 }
 
-double _calculateLength(List<double> vector, int count) {
+double _calculateLength(List<double?> vector, int count) {
   double sum = 0;
   for (int i = 0; i < count; i++) {
-    final el = vector[i];
+    final el = vector[i]!;
     sum += el * el;
   }
   return sqrt(sum);

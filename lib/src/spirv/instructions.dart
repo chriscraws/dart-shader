@@ -45,9 +45,9 @@ class OpCapability extends Instruction {
 }
 
 class OpDecorate extends Instruction {
-  final Instruction/*!*/ target;
-  final int/*!*/ decoration;
-  final List<int>/*!*/ extraOperands;
+  final Instruction target;
+  final int decoration;
+  final List<int> extraOperands;
   final List<Instruction> deps;
 
   static const int linkageAttributes = 41;
@@ -55,9 +55,9 @@ class OpDecorate extends Instruction {
   static const int linkageImport = 1;
 
   OpDecorate({
-    this.decoration,
-    this.extraOperands,
-    this.target,
+    required this.decoration,
+    required this.extraOperands,
+    required this.target,
   })  : deps = [target],
         super(
           opCode: 71,
@@ -65,8 +65,8 @@ class OpDecorate extends Instruction {
         );
 
   OpDecorate.export({
-    Instruction target,
-    String name,
+    required Instruction target,
+    required String name,
   }) : this(
           target: target,
           decoration: linkageAttributes,
@@ -77,8 +77,8 @@ class OpDecorate extends Instruction {
         );
 
   OpDecorate.import({
-    OpFunction function,
-    String name,
+    required OpFunction function,
+    required String name,
   }) : this(
           target: function,
           decoration: linkageAttributes,
@@ -140,8 +140,7 @@ class OpTypeVec extends Instruction with Type {
   final int elementCount;
 
   const OpTypeVec._(this.componentType, this.elementCount)
-      : assert(componentType != null),
-        assert(elementCount > 1),
+      : assert(elementCount > 1),
         super(
           result: true,
           opCode: 23,
@@ -162,8 +161,7 @@ class OpTypePointer extends Instruction with Type {
   final List<Instruction> deps;
 
   OpTypePointer._(this.objectType)
-      : assert(objectType != null),
-        deps = [objectType],
+      : deps = [objectType],
         super(
           isType: true,
           result: true,
@@ -182,10 +180,9 @@ class OpTypeFunction extends Instruction {
   final List<Instruction> deps;
 
   OpTypeFunction({
-    this.returnType,
+    required this.returnType,
     this.paramTypes = const [],
-  })  : assert(returnType != null),
-        deps = [returnType, ...paramTypes],
+  })  : deps = [returnType, ...paramTypes],
         super(
           opCode: 33,
           result: true,
@@ -203,8 +200,7 @@ class OpFunction extends Instruction {
   final List<Instruction> deps;
 
   OpFunction._(this.fnType)
-      : assert(fnType != null),
-        deps = [fnType],
+      : deps = [fnType],
         super(
           result: true,
           type: fnType.returnType,
@@ -228,8 +224,8 @@ class ShaderFunction<T> extends OpFunction {
     paramTypes: [vec2T],
   );
 
-  final T source;
-  final ExternalSampler sampler;
+  final T? source;
+  final ExternalSampler? sampler;
 
   ShaderFunction([this.sampler, this.source]) : super._(_type);
 
@@ -252,7 +248,7 @@ class ShaderFunction<T> extends OpFunction {
     final pos = params[0];
     pos.evaluate();
     for (int i = 0; i < 4; i++) {
-      result[i] = sampler.evaluate(pos.value[0], pos.value[1], i);
+      result[i] = sampler!.evaluate(pos.value[0], pos.value[1], i);
     }
   }
 }
@@ -264,20 +260,17 @@ class OpFunctionCall extends Instruction with Evaluable {
   final void Function(List<Evaluable> params, List<double> result) evaluator;
 
   OpFunctionCall({
-    this.function,
-    this.params,
-    this.evaluator,
-  })  : assert(function != null),
-        assert(params != null),
-        assert(evaluator != null),
-        assert(params.length == function.fnType.paramTypes.length),
+    required this.function,
+    required this.params,
+    required this.evaluator,
+  })  : assert(params.length == function.fnType.paramTypes.length),
         deps = [function, ...params],
         super(
           opCode: 57,
           result: true,
           type: function.type,
         ) {
-    value.length = type.elementCount;
+    value.length = type!.elementCount;
     for (int i = 0; i < value.length; i++) {
       value[i] = 0;
     }
@@ -327,8 +320,7 @@ class OpReturnValue extends Instruction {
   final List<Instruction> deps;
 
   OpReturnValue(this.value)
-      : assert(value != null),
-        deps = [value],
+      : deps = [value],
         super(
           opCode: 254,
         );
@@ -345,11 +337,11 @@ class OpConstant extends Instruction with Evaluable {
           result: true,
           type: floatT,
         ) {
-    this.value.add(constant);
+    this.value.add(constant!);
   }
 
   List<int> operands(Identifier i) =>
-      Float32List.fromList([constant]).buffer.asInt32List();
+      Float32List.fromList([constant!]).buffer.asInt32List();
 
   void evaluate() {}
 }
@@ -357,12 +349,10 @@ class OpConstant extends Instruction with Evaluable {
 class OpConstantComposite extends Instruction with Evaluable {
   final List<OpConstant> constituants;
 
-  List<Evaluable> _deps;
+  late List<Evaluable> _deps;
 
   OpConstantComposite._(Type type, List<double> constituants)
-      : assert(constituants != null),
-        assert(constituants.length > 1),
-        assert(constituants.every((c) => c != null)),
+      : assert(constituants.length > 1),
         constituants = constituants.map((v) => OpConstant(v)).toList(),
         super(
           isDeclaration: true,
@@ -406,8 +396,7 @@ class OpVariable extends Instruction {
   final Float32List variable;
 
   OpVariable._(OpTypePointer type)
-      : assert(type != null),
-        objectType = type.objectType,
+      : objectType = type.objectType,
         variable = Float32List(type.objectType.elementCount),
         super(
           isDeclaration: true,
@@ -431,8 +420,7 @@ class OpLoad extends Instruction with Evaluable {
   final List<Instruction> deps;
 
   OpLoad(this.pointer)
-      : assert(pointer != null),
-        deps = [pointer],
+      : deps = [pointer],
         super(
           opCode: 61,
           result: true,
@@ -454,15 +442,14 @@ class OpFNegate extends Instruction with Evaluable {
   final List<Evaluable> deps;
 
   OpFNegate(this.a)
-      : assert(a != null),
-        deps = [a],
+      : deps = [a],
         super(
           type: a.type,
           result: true,
           opCode: 127,
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -490,7 +477,7 @@ abstract class _BinOp extends Instruction with Evaluable {
           opCode: opCode,
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -511,31 +498,31 @@ abstract class _BinOp extends Instruction with Evaluable {
 }
 
 class OpFAdd extends _BinOp {
-  OpFAdd(Instruction a, Instruction b) : super(129, a, b);
+  OpFAdd(Instruction a, Instruction b) : super(129, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x + y;
 }
 
 class OpFSub extends _BinOp {
-  OpFSub(Instruction a, Instruction b) : super(131, a, b);
+  OpFSub(Instruction a, Instruction b) : super(131, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x - y;
 }
 
 class OpFMul extends _BinOp {
-  OpFMul(Instruction a, Instruction b) : super(133, a, b);
+  OpFMul(Instruction a, Instruction b) : super(133, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x * y;
 }
 
 class OpFDiv extends _BinOp {
-  OpFDiv(Instruction a, Instruction b) : super(136, a, b);
+  OpFDiv(Instruction a, Instruction b) : super(136, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x / y;
 }
 
 class OpFMod extends _BinOp {
-  OpFMod(Instruction a, Instruction b) : super(141, a, b);
+  OpFMod(Instruction a, Instruction b) : super(141, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x % y;
 }
@@ -556,7 +543,7 @@ class OpFDot extends Instruction with Evaluable {
           opCode: 148,
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -588,7 +575,7 @@ class OpVectorTimesScalar extends Instruction with Evaluable {
           opCode: 142,
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -622,9 +609,7 @@ class OpCompositeExtract extends Instruction with Evaluable {
   final List<int> indices;
 
   OpCompositeExtract.vec(this.source, int index)
-      : assert(source != null),
-        assert(index != null),
-        deps = [source],
+      : deps = [source],
         indices = [index],
         super(
           opCode: 81,
@@ -632,7 +617,7 @@ class OpCompositeExtract extends Instruction with Evaluable {
           type: floatT,
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -656,7 +641,6 @@ class OpVectorShuffle extends Instruction with Evaluable {
 
   OpVectorShuffle(this.source, this.indices)
       : assert(source.type != floatT),
-        assert(indices != null),
         assert(indices.length > 0),
         assert(indices.length <= 4),
         deps = [source],
@@ -666,7 +650,7 @@ class OpVectorShuffle extends Instruction with Evaluable {
           type: _resolveVecType(indices.length),
         ) {
     value.addAll(Iterable.generate(
-      type.elementCount,
+      type!.elementCount,
       (_) => 0,
     ));
   }
@@ -689,12 +673,11 @@ class OpCompositeConstruct extends Instruction with Evaluable {
   final List<Evaluable> deps;
 
   static int _count(List<Instruction> instructions) =>
-      instructions.fold(0, (sum, i) => sum + i.type.elementCount);
+      instructions.fold(0, (sum, i) => sum + i.type!.elementCount);
 
   OpCompositeConstruct._(Type type, this.deps)
-      : assert(deps != null),
-        assert(deps.every((child) => child.type != null)),
-        assert(deps.every((child) => child.type.elementCount > 0)),
+      : assert(deps.every((child) => child.type != null)),
+        assert(deps.every((child) => child.type!.elementCount > 0)),
         assert(_count(deps) == type.elementCount),
         super(
           type: type,
@@ -729,7 +712,7 @@ abstract class OpExtInst extends Instruction with Evaluable {
   final int extOp;
   final List<Evaluable> deps;
 
-  OpExtInst(this.extOp, this.deps, [Type type])
+  OpExtInst(this.extOp, this.deps, [Type? type])
       : assert(deps.length > 0),
         assert(!deps.any((dep) => dep.type != deps[0].type)),
         super(
@@ -738,7 +721,7 @@ abstract class OpExtInst extends Instruction with Evaluable {
           result: true,
         ) {
     value.addAll(Iterable.generate(
-      this.type.elementCount,
+      this.type!.elementCount,
       (_) => 0,
     ));
   }

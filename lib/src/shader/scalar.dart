@@ -129,12 +129,12 @@ class Scalar extends Expression with Vec2OrScalar, Vec3OrScalar, Vec4OrScalar {
   /// Mix linearly interpolates between [a] and [b] as this value ranges from 0
   /// to 1.
   T mix<T extends Expression>(T a, T b) =>
-      a._construct(FMix(a._node, b._node, this._node));
+      a._construct(FMix(a._node, b._node, this._node)) as T;
 
   /// Performs smooth Hermite interpolation between 0 and 1 as this value ranges
   /// from [a] to [b].
   T smoothStep<T extends Expression>(T a, T b) =>
-      a._construct(SmoothStep(a._node, b._node, this._node));
+      a._construct(SmoothStep(a._node, b._node, this._node)) as T;
 
   double evaluate() {
     _node.evaluate();

@@ -19,7 +19,7 @@ abstract class Shader<T> {
       _cachedExpression = color(_position);
     }
     _position.value = position;
-    return _cachedExpression.evaluate();
+    return _cachedExpression!.evaluate();
   }
 
   List<double> packUniformValues() => _module.packUniformValues();
@@ -31,7 +31,7 @@ abstract class Shader<T> {
 
   final _position = Vec2Uniform();
 
-  Vec4 _cachedExpression;
-  Module _module;
-  ByteBuffer/*!*/ _spirv;
+  Vec4? _cachedExpression;
+  late Module _module;
+  late ByteBuffer _spirv;
 }

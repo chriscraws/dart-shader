@@ -7,7 +7,7 @@ import 'dart:typed_data';
 abstract class Identifier {
   /// Assign an ID to an Instruction, and return it. If
   /// an ID is already assigned, return that.
-  int identify(Instruction inst);
+  int/*!*/ identify(Instruction/*!*/ inst);
 }
 
 /// It's helpful to identify types statically.
@@ -17,7 +17,7 @@ mixin Type on Instruction {
 
 /// Instructions that can evaluate to a value.
 mixin Evaluable on Instruction {
-  final List<double> value = <double>[];
+  final List<double/*!*/> value = <double/*!*/>[];
   void evaluate();
 }
 
@@ -32,7 +32,7 @@ abstract class Instruction {
   final bool result;
 
   /// SPIR-V code for the instruction.
-  final int opCode;
+  final int/*!*/ opCode;
 
   // True if this instruction is a variable or constant declaration.
   final bool isDeclaration;
@@ -81,11 +81,11 @@ abstract class Instruction {
 
   /// Encode the word-stream of operands for this Instruction.
   /// This method should be overwridden by subclasses.
-  List<int> operands(Identifier i) => [];
+  List<int/*!*/> operands(Identifier i) => [];
 
   /// Encode the full word-stream for the entire instruction.
   /// This method should not be overridden.
-  List<int> encode(Identifier i) {
+  List<int/*!*/> encode(Identifier i) {
     final ops = operands(i);
     int wordCount = ops.length + 1;
     if (type != null) wordCount++;
@@ -101,5 +101,5 @@ abstract class Instruction {
   /// Returns any Instructions that return results and need
   /// to be defined before this Instruction. This should be
   /// overriden by subclasses.
-  List<Instruction> get deps => [];
+  List<Instruction>/*!*/ get deps => [];
 }

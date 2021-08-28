@@ -57,7 +57,7 @@ class Module extends Identifier {
       size += uniform.variable.length;
     }
     int i = 0;
-    List<double> values = List<double>(size);
+    List<double> values = List<double>.filled(size, 0);
     for (final uniform in _uniforms) {
       for (int ui = 0; ui < uniform.variable.length; ui++) {
         values[i] = uniform.variable[ui];

@@ -45,9 +45,9 @@ class OpCapability extends Instruction {
 }
 
 class OpDecorate extends Instruction {
-  final Instruction target;
-  final int decoration;
-  final List<int> extraOperands;
+  final Instruction/*!*/ target;
+  final int/*!*/ decoration;
+  final List<int>/*!*/ extraOperands;
   final List<Instruction> deps;
 
   static const int linkageAttributes = 41;

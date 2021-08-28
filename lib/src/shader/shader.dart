@@ -33,5 +33,5 @@ abstract class Shader<T> {
 
   Vec4 _cachedExpression;
   Module _module;
-  ByteBuffer _spirv;
+  ByteBuffer/*!*/ _spirv;
 }

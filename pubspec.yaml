@@ -1,7 +1,6 @@
 name: shader
 description: Library for writing shaders in Dart.
 version: 0.0.1
-author:
 homepage:
 
 environment:
@@ -16,10 +15,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   image: any
-
-dependency_overrides:
-  sky_engine:
-    path: ../engine/src/out/host_debug_unopt/gen/dart-pkg/sky_engine
+  test: ^1.17.11
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

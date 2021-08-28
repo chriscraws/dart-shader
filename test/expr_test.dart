@@ -1,25 +1,21 @@
-@TestOn('vm')
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:shader/shader.dart';
-import 'package:shader/image_sampler.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 /// If true, overwrites all the golen files. If you run the tests with this
 /// set to true, be sure to use `spirv-val` to validate all files matching
 /// `test/*.golden`. Then set this back to false.
-final overwriteGoldens = true;
+final overwriteGoldens = false;
 
 Future<void> matchGolden(ByteBuffer item, String filename) async {
   assert(filename != null);
-  final file = File('goldens/' + filename);
+  final file = File('test/goldens/' + filename);
   if (overwriteGoldens) {
     await file.writeAsBytes(item.asUint8List(), flush: true);
   }
-  print("testing '$filename'");
   expect(item.asUint8List(), equals(await file.readAsBytes()));
 }
 
@@ -31,13 +27,11 @@ class ColorShader extends Shader {
   Vec4 color(Vec2 position) => out;
 }
 
-class TestShader extends Shader<ui.Shader> {
-  TestShader(ui.Image img) : image = ImageSampler(img);
+class TestShader extends Shader {
   final time = ScalarUniform();
   final resolution = Vec2Uniform();
   final background = Vec3Uniform();
   final foreground = Vec4Uniform();
-  final ImageSampler image;
 
   Vec4 color(Vec2 position) {
     final uv = (position / resolution - Vec2.all(0.5)) * Scalar(2);
@@ -50,7 +44,7 @@ class TestShader extends Shader<ui.Shader> {
     final c = mixAmt
         .mix(
           Vec4.of([background, Scalar(1)]),
-          foreground * image.sample(uv),
+          foreground,
         )
         .abs();
 
@@ -80,10 +74,7 @@ void main() {
   });
 
   test('test shader', () async {
-    final pngBytes = File('logo_flutter_1080px_clr.png').readAsBytesSync();
-    final codec = await ui.instantiateImageCodec(pngBytes);
-    final frame = await codec.getNextFrame();
-    final shader = TestShader(frame.image);
+    final shader = TestShader();
     await matchGolden(shader.toSPIRV(), 'test_shader.golden');
   });
 
@@ -220,8 +211,7 @@ void main() {
   test('writes uniform data', () {
     final shader = UniformShader();
     final expectedSize = 1 + 2 + 3 + 4; // scalar, vec2, vec3, vec4
-    Float32List output = Float32List(expectedSize);
-    shader.writeUniformData((i, v) => output[i] = v);
+    List<double> output = shader.packUniformValues();
 
     // expect all zeroes
     for (final v in output) {
@@ -235,7 +225,7 @@ void main() {
     shader.vec4.value = vm.Vector4(1, 2, 3, 4);
 
     // re-write values to buffer
-    shader.writeUniformData((i, v) => output[i] = v);
+    output = shader.packUniformValues();
 
     // expect correct values - this ordering may be brittle with library changes.
     final expected = [1, 2, 3, 4, 10, 8, 9, 5, 6, 7];

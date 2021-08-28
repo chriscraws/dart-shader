@@ -12,14 +12,13 @@ final _version = 0x00010500;
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
 ///
-class Module<T> extends Identifier {
+class Module extends Identifier {
   // fragment position
   static final position = OpFunctionParameter(vec2T);
 
   final _ids = <Instruction, int>{};
   final _constants = <Instruction>{};
   final _uniforms = <OpVariable>[];
-  final _children = <T>[];
 
   int _bound = 0;
   Instruction _color;
@@ -52,9 +51,7 @@ class Module<T> extends Identifier {
     _color = vec4;
   }
 
-  List<T> get children => List<T>.unmodifiable(_children);
-
-  List<double> get uniformData {
+  List<double> packUniformValues() {
     int size = 0;
     for (final uniform in _uniforms) {
       size += uniform.variable.length;
@@ -80,7 +77,6 @@ class Module<T> extends Identifier {
       // capabilities
       OpCapability.matrix,
       OpCapability.shader,
-      OpCapability.linkage,
 
       // extension instruction imports
       OpExtInstImport.glsl,
@@ -104,24 +100,6 @@ class Module<T> extends Identifier {
       _ids.keys, // instructions as values
     );
 
-    // decorate all imported functions
-    final importedFunctions = sortedMap.values
-        .whereType<ShaderFunction<T>>()
-        .where((f) => f != main)
-        .toList();
-    if (importedFunctions.length !=
-        sortedMap.values.where((v) => v.isFunction && v != main).length) {
-      throw ('shader contains sampler with an unknown source type');
-    }
-    for (int i = 0; i < importedFunctions.length; i++) {
-      final fun = importedFunctions[i];
-      instructions.add(OpDecorate.import(
-        function: fun,
-        name: 's${i + 10 - 10}',
-      ));
-      _children.add(fun.source);
-    }
-
     // add type declarations
     instructions.addAll(sortedMap.values.where((i) => i.isType));
 
@@ -132,12 +110,6 @@ class Module<T> extends Identifier {
     _uniforms.addAll(sortedMap.values
         .where((i) => i is OpVariable)
         .map((i) => i as OpVariable));
-
-    // declare imported functions
-    for (int i = 0; i < importedFunctions.length; i++) {
-      instructions.add(importedFunctions[i]);
-      instructions.add(OpFunctionEnd());
-    }
 
     // add function declaration opening
     instructions.addAll([

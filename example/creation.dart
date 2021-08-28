@@ -37,7 +37,7 @@ class Creation extends Shader {
     // Ported from 'Creation by Silexars' - credits to Danilo Guanabara.
     // https://www.shadertoy.com/view/XsXXDn
     final uv = position / _resolution;
-    final rgb = List<Scalar>(3);
+    final rgb = List<Scalar>.filled(3, 0.s);
     for (int i = 0; i < 3; i++) {
       final p = (uv - Vec2.all(0.5));
       final z = _time + Scalar(0.7 * i);

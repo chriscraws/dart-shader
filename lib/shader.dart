@@ -4,9 +4,8 @@
 /// and can also be compiled to SPIR-V. Intended for use with Flutter.
 ///
 /// See [Shader] to start.
-library expr;
+library shader;
 
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:vector_math/vector_math.dart' as vm;
@@ -17,7 +16,6 @@ import 'src/spirv/instructions.dart';
 import 'src/spirv/glsl.dart';
 
 part 'src/shader/expression.dart';
-part 'src/shader/sampler.dart';
 part 'src/shader/scalar.dart';
 part 'src/shader/shader.dart';
 part 'src/shader/vec2.dart';

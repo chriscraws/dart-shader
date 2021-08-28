@@ -8,21 +8,22 @@ import 'instructions.dart';
 import 'package:collection/collection.dart' show IterableExtension;
 
 final _magicNumber = 0x07230203;
-final _version = 0x00010500;
+final _version = 0x00010000;
 
 /// Module builds a complete unit of SPIR-V from
 /// an Instruction representing fragment color for a shader.
 ///
 class Module extends Identifier {
   // fragment position
-  static final position = OpFunctionParameter(vec2T);
+  final Evaluable color;
+
+  Module({required this.color});
 
   final _ids = <Instruction, int>{};
   final _constants = <Instruction>{};
   final _uniforms = <OpVariable>[];
 
   int _bound = 0;
-  late Instruction _color;
 
   @override
   int identify(Instruction inst) {
@@ -45,12 +46,6 @@ class Module extends Identifier {
     return id;
   }
 
-  // main must be assiged before calling [encode].
-  set color(Instruction vec4) {
-    assert(vec4.type == vec4T);
-    _color = vec4;
-  }
-
   List<double> packUniformValues() {
     int size = 0;
     for (final uniform in _uniforms) {
@@ -71,28 +66,43 @@ class Module extends Identifier {
   ByteBuffer encode() {
     _ids.clear();
 
-    final main = ShaderFunction()..resolve(this);
+    final main = OpFunction(OpTypeFunction(returnType: voidT));
+    final entryPoint = OpEntryPoint(
+      entryPoint: main,
+      name: "main",
+      interfaceVars: <OpVariable>[
+        OpVariable.fragCoord,
+        OpVariable.oColor,
+      ],
+    );
+    final assignColor = OpStore(
+      pointer: OpVariable.oColor,
+      value: color,
+    );
 
     final instructions = <Instruction>[
-      // capabilities
       OpCapability.matrix,
       OpCapability.shader,
-
-      // extension instruction imports
       OpExtInstImport.glsl,
-
-      // memory model
       OpMemoryModel.glsl,
-
-      // decorations
-      OpDecorate.export(
-        name: 'main',
-        target: main,
+      entryPoint,
+      OpExecutionMode(entryPoint: main),
+      OpDecorate(
+        target: OpVariable.fragCoord,
+        decoration: OpDecorate.builtin,
+        extraOperands: <int>[OpDecorate.builtinFragCoord],
+      ),
+      OpDecorate(
+        target: OpVariable.oColor,
+        decoration: OpDecorate.location,
+        extraOperands: <int>[0],
       ),
     ];
 
-    // get main definition, and identify all dependent instructions.
-    _color.resolve(this);
+    int nextLocation = 0;
+
+    <Instruction>[main, entryPoint, color]
+        .forEach((inst) => inst.resolve(this));
 
     // insert all instruction/id pairs into a sorted map
     final sortedMap = SplayTreeMap.fromIterables(
@@ -100,21 +110,28 @@ class Module extends Identifier {
       _ids.keys, // instructions as values
     );
 
+    // collect uniforms
+    _uniforms.addAll(sortedMap.values
+        .where((i) => i is OpVariable)
+        .map((i) => i as OpVariable));
+
+    // add uniform locations
+    instructions
+        .addAll(_uniforms.where((u) => u.isUniform).map((u) => OpDecorate(
+              target: u,
+              decoration: OpDecorate.location,
+              extraOperands: <int>[nextLocation++],
+            )));
+
     // add type declarations
     instructions.addAll(sortedMap.values.where((i) => i.isType));
 
     // add variable declarations
     instructions.addAll(sortedMap.values.where((i) => i.isDeclaration));
 
-    // collect uniforms
-    _uniforms.addAll(sortedMap.values
-        .where((i) => i is OpVariable)
-        .map((i) => i as OpVariable));
-
     // add function declaration opening
     instructions.addAll([
       main,
-      position,
       OpLabel(),
     ]);
 
@@ -124,7 +141,8 @@ class Module extends Identifier {
 
     // complete function declaration
     instructions.addAll([
-      OpReturnValue(_color),
+      assignColor,
+      opReturn,
       OpFunctionEnd(),
     ]);
 

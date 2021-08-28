@@ -24,7 +24,7 @@ mixin Evaluable on Instruction {
 /// Instructions are the next level of semantics in SPIR-V,
 /// they are essentially a grouping of words, that can be
 /// optionally assigned an identifier.
-abstract class Instruction {
+class Instruction {
   /// Optional type for the instruction.
   final Type? type;
 

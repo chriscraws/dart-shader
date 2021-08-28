@@ -6,8 +6,13 @@ import 'dart:typed_data';
 
 import 'instruction.dart';
 
-final _storageClassUniformConstant = 0;
+const _storageClassUniformConstant = 0;
+const _storageClassInput = 1;
+const _storageClassOutput = 3;
 
+const _executionModeOriginLowerLeft = 8;
+
+const voidT = OpTypeVoid._();
 const floatT = OpTypeFloat._(32);
 const vec2T = OpTypeVec._(floatT, 2);
 const vec3T = OpTypeVec._(floatT, 3);
@@ -54,6 +59,11 @@ class OpDecorate extends Instruction {
   static const int linkageExport = 0;
   static const int linkageImport = 1;
 
+  static const int builtin = 11;
+  static const int builtinFragCoord = 15;
+
+  static const int location = 30;
+
   OpDecorate({
     required this.decoration,
     required this.extraOperands,
@@ -95,6 +105,45 @@ class OpDecorate extends Instruction {
       ];
 }
 
+class OpEntryPoint extends Instruction {
+  final OpFunction entryPoint;
+  final String name;
+  final List<OpVariable> interfaceVars;
+  final List<Instruction> deps;
+
+  static const int executionModelFragment = 4;
+
+  OpEntryPoint({
+    required this.entryPoint,
+    required this.name,
+    required this.interfaceVars,
+  })  : deps = [entryPoint, ...interfaceVars],
+        super(
+          opCode: 15,
+        );
+
+  List<int> operands(Identifier i) => <int>[
+        executionModelFragment,
+        i.identify(entryPoint),
+        ..._toWords(name),
+        ...interfaceVars.map(i.identify).toList(),
+      ];
+}
+
+class OpExecutionMode extends Instruction {
+  final OpFunction entryPoint;
+  final List<Instruction> deps;
+
+  OpExecutionMode({required this.entryPoint})
+      : deps = [entryPoint],
+        super(opCode: 16);
+
+  List<int> operands(Identifier i) => <int>[
+        i.identify(entryPoint),
+        _executionModeOriginLowerLeft,
+      ];
+}
+
 class OpExtInstImport extends Instruction {
   static const glsl = OpExtInstImport._('GLSL.std.450');
 
@@ -118,6 +167,17 @@ class OpMemoryModel extends Instruction {
         );
 
   List<int> operands(Identifier i) => [0, 1];
+}
+
+class OpTypeVoid extends Instruction with Type {
+  const OpTypeVoid._()
+      : super(
+          result: true,
+          opCode: 19,
+          isType: true,
+        );
+
+  final int elementCount = 0;
 }
 
 class OpTypeFloat extends Instruction with Type {
@@ -159,9 +219,12 @@ class OpTypePointer extends Instruction with Type {
   final int elementCount = -1;
   final Type objectType;
   final List<Instruction> deps;
+  final int storageClass;
 
-  OpTypePointer._(this.objectType)
-      : deps = [objectType],
+  OpTypePointer._(
+    this.objectType, {
+    this.storageClass = _storageClassUniformConstant,
+  })  : deps = [objectType],
         super(
           isType: true,
           result: true,
@@ -169,7 +232,7 @@ class OpTypePointer extends Instruction with Type {
         );
 
   List<int> operands(Identifier i) => [
-        _storageClassUniformConstant,
+        storageClass,
         i.identify(objectType),
       ];
 }
@@ -199,7 +262,7 @@ class OpFunction extends Instruction {
   final OpTypeFunction fnType;
   final List<Instruction> deps;
 
-  OpFunction._(this.fnType)
+  OpFunction(this.fnType)
       : deps = [fnType],
         super(
           result: true,
@@ -214,97 +277,11 @@ class OpFunction extends Instruction {
       ];
 }
 
-abstract class ExternalSampler {
-  double evaluate(double x, double y, int channel);
-}
-
-class ShaderFunction<T> extends OpFunction {
-  static final _type = OpTypeFunction(
-    returnType: vec4T,
-    paramTypes: [vec2T],
-  );
-
-  final T? source;
-  final ExternalSampler? sampler;
-
-  ShaderFunction([this.sampler, this.source]) : super._(_type);
-
-  OpFunctionCall call(Evaluable pos) {
-    assert(pos.type == vec2T);
-    return OpFunctionCall(
-      function: this,
-      params: [pos],
-      evaluator: _evaluate,
-    );
-  }
-
-  void _evaluate(List<Evaluable> params, List<double> result) {
-    if (sampler == null) {
-      return;
-    }
-
-    assert(params.length == 1);
-    assert(result.length == 4);
-    final pos = params[0];
-    pos.evaluate();
-    for (int i = 0; i < 4; i++) {
-      result[i] = sampler!.evaluate(pos.value[0], pos.value[1], i);
-    }
-  }
-}
-
-class OpFunctionCall extends Instruction with Evaluable {
-  final OpFunction function;
-  final List<Evaluable> params;
-  final List<Instruction> deps;
-  final void Function(List<Evaluable> params, List<double> result) evaluator;
-
-  OpFunctionCall({
-    required this.function,
-    required this.params,
-    required this.evaluator,
-  })  : assert(params.length == function.fnType.paramTypes.length),
-        deps = [function, ...params],
-        super(
-          opCode: 57,
-          result: true,
-          type: function.type,
-        ) {
-    value.length = type!.elementCount;
-    for (int i = 0; i < value.length; i++) {
-      value[i] = 0;
-    }
-  }
-
-  void evaluate() => evaluator(params, value);
-
-  List<int> operands(Identifier i) => [
-        i.identify(function),
-        ...params.map(i.identify),
-      ];
-}
-
 class OpFunctionEnd extends Instruction {
   const OpFunctionEnd()
       : super(
           opCode: 56,
         );
-}
-
-class OpFunctionParameter extends Instruction with Evaluable {
-  OpFunctionParameter(Type type)
-      : super(
-          type: type,
-          opCode: 55,
-          result: true,
-        ) {
-    value.addAll(Iterable.generate(
-      type.elementCount,
-      (_) => 0,
-    ));
-  }
-
-  void evaluate() {}
 }
 
 class OpLabel extends Instruction {
@@ -314,6 +291,8 @@ class OpLabel extends Instruction {
           result: true,
         );
 }
+
+const opReturn = Instruction(opCode: 253);
 
 class OpReturnValue extends Instruction {
   final Instruction value;
@@ -394,9 +373,14 @@ class OpConstantComposite extends Instruction with Evaluable {
 class OpVariable extends Instruction {
   final Type objectType;
   final Float32List variable;
+  final int storageClass;
+  final bool isUniform;
 
-  OpVariable._(OpTypePointer type)
-      : objectType = type.objectType,
+  OpVariable._(
+    OpTypePointer type, {
+    this.storageClass = _storageClassUniformConstant,
+  })  : objectType = type.objectType,
+        isUniform = storageClass == _storageClassUniformConstant,
         variable = Float32List(type.objectType.elementCount),
         super(
           isDeclaration: true,
@@ -410,7 +394,17 @@ class OpVariable extends Instruction {
   OpVariable.vec3Uniform() : this._(uniformVec3T);
   OpVariable.vec4Uniform() : this._(uniformVec4T);
 
-  List<int> operands(Identifier i) => [_storageClassUniformConstant];
+  static final OpVariable fragCoord = OpVariable._(
+    OpTypePointer._(vec2T, storageClass: _storageClassInput),
+    storageClass: _storageClassInput,
+  );
+
+  static final OpVariable oColor = OpVariable._(
+    OpTypePointer._(vec4T, storageClass: _storageClassOutput),
+    storageClass: _storageClassOutput,
+  );
+
+  List<int> operands(Identifier i) => [storageClass];
 
   void evaluate() {}
 }
@@ -434,6 +428,23 @@ class OpLoad extends Instruction with Evaluable {
   List<double> get value => pointer.variable;
 
   Float32List get variable => pointer.variable;
+}
+
+class OpStore extends Instruction {
+  final OpVariable pointer;
+  final Evaluable value;
+  final List<Instruction> deps;
+
+  OpStore({
+    required this.pointer,
+    required this.value,
+  })  : deps = [pointer, value],
+        super(opCode: 62);
+
+  List<int> operands(Identifier i) => <int>[
+        i.identify(pointer),
+        i.identify(value),
+      ];
 }
 
 // Numerical operation with one arguments.
@@ -498,31 +509,36 @@ abstract class _BinOp extends Instruction with Evaluable {
 }
 
 class OpFAdd extends _BinOp {
-  OpFAdd(Instruction a, Instruction b) : super(129, a as Evaluable, b as Evaluable);
+  OpFAdd(Instruction a, Instruction b)
+      : super(129, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x + y;
 }
 
 class OpFSub extends _BinOp {
-  OpFSub(Instruction a, Instruction b) : super(131, a as Evaluable, b as Evaluable);
+  OpFSub(Instruction a, Instruction b)
+      : super(131, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x - y;
 }
 
 class OpFMul extends _BinOp {
-  OpFMul(Instruction a, Instruction b) : super(133, a as Evaluable, b as Evaluable);
+  OpFMul(Instruction a, Instruction b)
+      : super(133, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x * y;
 }
 
 class OpFDiv extends _BinOp {
-  OpFDiv(Instruction a, Instruction b) : super(136, a as Evaluable, b as Evaluable);
+  OpFDiv(Instruction a, Instruction b)
+      : super(136, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x / y;
 }
 
 class OpFMod extends _BinOp {
-  OpFMod(Instruction a, Instruction b) : super(141, a as Evaluable, b as Evaluable);
+  OpFMod(Instruction a, Instruction b)
+      : super(141, a as Evaluable, b as Evaluable);
 
   double _op(double x, double y) => x % y;
 }

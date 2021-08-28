@@ -1,15 +1,13 @@
 part of '../../shader.dart';
 
 /// Shader is a process that returns a color given a position and
-/// uniform values. 
-abstract class Shader<T> {
+/// uniform values.
+abstract class Shader {
   Shader() {
-    _module = Module();
-    final pos = Vec2._(Module.position);
-    _module.color = color(pos)._node;
+    final Vec2 pos = Vec2._(OpLoad(OpVariable.fragCoord));
+    _module = Module(color: color(pos)._node);
     _spirv = _module.encode();
   }
-
 
   /// The color of each fragment position.
   Vec4 color(Vec2 position);
